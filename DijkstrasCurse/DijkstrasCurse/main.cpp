@@ -101,89 +101,80 @@ public:
 	}
 };
 
+class GridSprite
+{
+	wchar_t asChars[5][5];
+
+	void Display(unsigned int edges)
+	{
+
+	}
+
+};
+
 struct Pos
 {
 	int x;
 	int y;
 };
 
-class Component
+enum Direction
 {
-public:
-	virtual void Update() = 0;
+	Up,
+	Down,
+	Left,
+	Right,
 };
 
-class Displayable : public Component
+enum GameCell
 {
-public:
-	virtual void Render() = 0;
+	SPACE,
+	WALL,
+	BLOB,
 };
-
-
-class Entity
-{
-public:
-	Entity();
-
-	void AddComponent(std::shared_ptr<Component> c)
-	{
-#if DEBUG
-		for (auto itr : components)
-		{
-			assert(itr != c);
-		}
-#endif
-		components.push_back(c);
-	}
-
-	void Update()
-	{
-		for (auto c : components)
-		{
-			c->Update();
-		}
-	}
-
-protected:
-	std::vector<std::shared_ptr<Component>> components;
-};
-
-class GameSystem
-{
-public:
-	void AddDisplayable(std::shared_ptr<Displayable> d)
-	{
-
-	}
-
-	std::vector<std::shared_ptr<
-};
-
 
 class GameBoard
 {
 protected:
-	unsigned char width;
-	unsigned char height;
+	int width;
+	int height;
+
+	std::unique_ptr<GameCell[]> asGameBoard;
 
 public:
-	GameBoard(int w, int h) 
+	GameBoard(int w, int h)
 		: width(w)
 		, height(h)
+		, asGameBoard(std::make_unique<GameCell[]>(w * h))
 	{
-		asGameBoard = new unsigned int[w, h];
-		asGameBoard[w + 3] = 1;
-		asGameBoard[w + w + w + 5] = 1;
+		for (int x = 0; x < width; x++)
+		{
+			for (int y = 0; y < height; y++)
+			{
+				bool bWall = (rand() % 2 == 0);
+				bool bBlob = (rand() % 2 == 0);
+				Cell(x, y) = (bWall)?(WALL):(bBlob)?(BLOB):(SPACE);
+			}
+		}
 	}
 
-public:
+	const GameCell& Cell(const int& x, const int& y) const
+	{
+		return asGameBoard[x + width * y];
+	}
+
+	GameCell& Cell(const int& x, const int& y)
+	{
+		return asGameBoard[x + width * y];
+	}
+
 	bool CanMove(const Pos& sPos, const Pos& sDir) {}
 
 public:
 	void Draw(ConsoleWriter& sConsole)
 	{
-		//sConsole.Background(BLUE, false);
-
+		sConsole.Background(BLACK, false);
+		sConsole.Foreground(BLACK, true);
 		for (auto x = 0; x < width; x++)
 		{
 			for (auto y = 0; y < height; y++)
@@ -194,17 +185,32 @@ public:
 			}
 		}
 
-		sConsole.Background(RED, false);
-		sConsole.Foreground(RED, true);
+		sConsole.Background(BLACK, true);
+		sConsole.Foreground(BLACK, false);
 		for (auto x = 0; x < width; x++)
 		{
 			for (auto y = 0; y < height; y++)
 			{
-				if (asGameBoard[x + y * width] == 1)
+				if (asGameBoard[x + y * width] == WALL)
 				{
-					sConsole.Print(x * 4 + 1, y * 2 + 0, L"###");
-					sConsole.Print(x * 4 + 1, y * 2 + 1, L"###");
-					sConsole.Print(x * 4 + 1, y * 2 + 2, L"###");
+					sConsole.Print(x * 4 + 0, y * 2 + 0, L"+---+");
+					sConsole.Print(x * 4 + 0, y * 2 + 1, L"|===|");
+					sConsole.Print(x * 4 + 0, y * 2 + 2, L"+---+");
+				}
+			}
+		}
+
+		sConsole.Background(BLUE, false);
+		sConsole.Foreground(BLUE, true);
+		for (auto x = 0; x < width; x++)
+		{
+			for (auto y = 0; y < height; y++)
+			{
+				if (asGameBoard[x + y * width] == BLOB)
+				{
+					//sConsole.Print(x * 4 + 1, y * 2 + 0, L"---");
+					sConsole.Print(x * 4 + 1, y * 2 + 1, L"   ");
+					//sConsole.Print(x * 4 + 1, y * 2 + 2, L"---");
 				}
 			}
 		}
