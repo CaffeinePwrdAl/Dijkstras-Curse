@@ -212,6 +212,7 @@ enum GameCell
 	SPACE,
 	WALL,
 	BLOB,
+	SPIKES,
 };
 
 struct EdgeChar
@@ -434,7 +435,7 @@ public:
 				case 'e':
 					eCell = WALL;
 				case '!':
-					//eCell = SPIKES;
+					eCell = SPIKES;
 					break;
 				case 'B':
 					eCell = BLOB;
@@ -626,6 +627,26 @@ public:
 				}
 			}
 		}
+
+		for (auto x = 0; x < width; x++)
+		{
+			for (auto y = 0; y < height; y++)
+			{
+				if (Cell(x, y) == SPIKES)
+				{
+					sConsole.Foreground(WHITE, true);
+					sConsole.Print(x * 6 + 1, y * 4 + 1, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+					sConsole.Print(x * 6 + 1, y * 4 + 2, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+					sConsole.Print(x * 6 + 1, y * 4 + 3, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+
+					sConsole.Foreground(WHITE, false);
+					sConsole.Print(x * 6 + 2, y * 4 + 2, L"\u25B2");
+					sConsole.Print(x * 6 + 4, y * 4 + 3, L"\u25B2");
+					sConsole.Print(x * 6 + 5, y * 4 + 1, L"\u25B2");
+				}
+			}
+		}
+
 	}
 protected:
 
