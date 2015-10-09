@@ -163,16 +163,32 @@ public:
 			{
 				asConsoleBuffer[nOffset].Attributes = colourCode;
 				asConsoleBuffer[nOffset].Char.UnicodeChar = wszString[i];
+				nOffset++;
 			}
 		}
 	}
 
 	void Swap()
 	{
-		SMALL_RECT sWriteRegion = {0,0,0,0};
+		SMALL_RECT sWriteRegion;
+		sWriteRegion.Top    = 0;
+		sWriteRegion.Left   = 0;
+		sWriteRegion.Bottom = sBufferSize.Y;
+		sWriteRegion.Right  = sBufferSize.X;
+
 		COORD sBufferCoord = {0, 0};
+		/*COORD sBufferSize  = {2, 2};
+		CHAR_INFO sBuffer[2 * 2];
+		sBuffer[0].Attributes = RED << 4 | BLACK;
+		sBuffer[1].Attributes = RED << 4 | BLACK;
+		sBuffer[2].Attributes = RED << 4 | BLACK;
+		sBuffer[3].Attributes = RED << 4 | BLACK;
+		sBuffer[0].Char.UnicodeChar = L'A';
+		sBuffer[1].Char.UnicodeChar = L'B';
+		sBuffer[2].Char.UnicodeChar = L'C';
+		sBuffer[3].Char.UnicodeChar = L'D';*/
 		WriteConsoleOutputW(hScreenBuffer, asConsoleBuffer.get(), sBufferSize, sBufferCoord, &sWriteRegion);
-		wprintf(L"%d %d", sWriteRegion.Right, sWriteRegion.Bottom);
+		//wprintf(L"%d %d", sWriteRegion.Right, sWriteRegion.Bottom);
 	}
 };
 
