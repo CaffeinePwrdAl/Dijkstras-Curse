@@ -97,7 +97,7 @@ protected:
 	}
 
 public:
-	ConsoleWriter(SHORT width=64, SHORT height=40)
+	ConsoleWriter(SHORT width=64, SHORT height=45)
 		:sBufferSize {width, height}
 	{
 		hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -339,20 +339,20 @@ public:
 		wchar_t asLine[32];
 		if (w > 31) return;
 
-		int i;
-		for (i = 0; i < w - 1; i++)
-		{
-			asLine[i] = 0x2588;
-		}
-		asLine[i] = 0;
-
 		for (int j = 0; j < h; j++)
 		{
 			int startX = 0;
 
+			int i;
+			for (i = 0; i < w; i++)
+			{
+				asLine[i] = 0x2588;
+			}
+			asLine[i] = 0;
+
 			if (j == 0 && (ui8Neighbours & 0x02) == 0) continue;
 			if (j == h - 1 && (ui8Neighbours & 0x40) == 0) continue;
-
+			 
 			if (j == 0)
 			{
 				if ((ui8Neighbours & 0x01) == 0) startX = 1;
@@ -398,16 +398,74 @@ public:
 
 		srand(42);
 
-		for (int x = 0; x < width; x++)
+		/*for (int x = 0; x < width; x++)
 		{
 			for (int y = 0; y < height; y++)
 			{
 				bool bWall = (rand() % 5 == 0);
 				WriteCell(x, y, (bWall)?(WALL):(SPACE));
 			}
+		}*/
+
+		unsigned char aui8BoardA[10][11] =
+		{
+			"    !    e",
+			"  xxx  xxx",
+			"  Bxx     ",
+			" xxxxx xxx",
+			"          ",
+			"      xxxx",
+			"          ",
+			"     xx xx",
+			"xxxx B  xx",
+			"xxxxxxxxxx",
+		};
+
+		for (int x = 0; x < 10; x++)
+		{
+			for (int y = 0; y < 10; y++)
+			{
+				GameCell eCell = SPACE;
+				switch (aui8BoardA[y][x])
+				{
+				case 'x':
+					eCell = WALL;
+					break;
+				case 'e':
+					eCell = WALL;
+				case '!':
+					//eCell = SPIKES;
+					break;
+				case 'B':
+					eCell = BLOB;
+					break;
+				}
+				WriteCell(x, y, eCell);
+			}
 		}
 
-		WriteCell(0,0, BLOB);
+		//WriteCell(0,0, BLOB);
+
+		//WriteCell(4, 4, BLOB);
+		//WriteCell(5, 4, BLOB);
+		//WriteCell(6, 4, BLOB);
+		//WriteCell(5, 3, BLOB);
+		//WriteCell(5, 5, BLOB);
+
+
+		//WriteCell(7, 5, BLOB);
+		//WriteCell(8, 5, BLOB);
+		//WriteCell(9, 5, BLOB);
+		//WriteCell(7, 6, BLOB);
+		////WriteCell(8, 6, BLOB);
+		//WriteCell(9, 6, BLOB);
+		//WriteCell(7, 7, BLOB);
+		//WriteCell(8, 7, BLOB);
+		//WriteCell(9, 7, BLOB);
+
+		//WriteCell(rand() % w, rand() % h, BLOB);
+
+
 		/*Cell(0,1) = BLOB;
 		Cell(0,2) = BLOB;
 		Cell(0,3) = BLOB;
@@ -545,10 +603,12 @@ public:
 
 		//sConsole.Background(BLUE, true);
 		sConsole.Foreground(MAGENTA, true);
+		
 		for (auto x = 0; x < width; x++)
 		{
 			for (auto y = 0; y < height; y++)
 			{
+				//if (x == 5 && y == 4 || y != 3 && y != 5) continue;
 				if (Cell(x,y) == BLOB)
 				{
 					unsigned char ui8Neighbours = 0;
