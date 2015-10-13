@@ -213,6 +213,7 @@ enum GameCell
 	WALL,
 	BLOB,
 	SPIKES,
+	EXIT,
 };
 
 struct EdgeChar
@@ -344,16 +345,16 @@ public:
 		{
 			int startX = 0;
 
-			int i;
+		int i;
 			for (i = 0; i < w; i++)
-			{
-				asLine[i] = 0x2588;
-			}
-			asLine[i] = 0;
+		{
+			asLine[i] = 0x2588;
+		}
+		asLine[i] = 0;
 
 			if (j == 0 && (ui8Neighbours & 0x02) == 0) continue;
 			if (j == h - 1 && (ui8Neighbours & 0x40) == 0) continue;
-			 
+
 			if (j == 0)
 			{
 				if ((ui8Neighbours & 0x01) == 0) startX = 1;
@@ -414,7 +415,7 @@ public:
 			"  xxx  xxx",
 			"  Bxx     ",
 			" xxxxx xxx",
-			"          ",
+			"         e",
 			"      xxxx",
 			"          ",
 			"     xx xx",
@@ -433,14 +434,15 @@ public:
 					eCell = WALL;
 					break;
 				case 'e':
-					eCell = WALL;
+					eCell = EXIT;
+					break;
 				case '!':
 					eCell = SPIKES;
 					break;
 				case 'B':
 					eCell = BLOB;
 					break;
-				}
+		}
 				WriteCell(x, y, eCell);
 			}
 		}
@@ -643,6 +645,16 @@ public:
 					sConsole.Print(x * 6 + 2, y * 4 + 2, L"\u25B2");
 					sConsole.Print(x * 6 + 4, y * 4 + 3, L"\u25B2");
 					sConsole.Print(x * 6 + 5, y * 4 + 1, L"\u25B2");
+				}
+				else if (Cell(x, y) == EXIT)
+				{
+					sConsole.Foreground(WHITE, true);
+					sConsole.Background(BLACK, false);
+					sConsole.Print(x * 6 + 1, y * 4 + 0,       L"\u2591\u2592\u2593\u2592\u2591");
+					sConsole.Print(x * 6 + 0, y * 4 + 1, L"\u2591\u2592\u2554\u2550\u2557\u2592\u2591");
+					sConsole.Print(x * 6 + 0, y * 4 + 2, L"\u2592\u2593\u2551\u25D8\u2551\u2593\u2592");
+					sConsole.Print(x * 6 + 0, y * 4 + 3, L"\u2591\u2592\u255A\u2550\u255D\u2592\u2591");
+					sConsole.Print(x * 6 + 1, y * 4 + 4,       L"\u2591\u2592\u2593\u2592\u2591");
 				}
 			}
 		}
