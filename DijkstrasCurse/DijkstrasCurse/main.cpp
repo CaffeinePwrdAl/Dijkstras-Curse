@@ -302,8 +302,12 @@ public:
 
 		asChars[1][1] = sData.fill;
 		
-		wchar_t asLine[32];
-		if (w > 31) return;
+		wchar_t asLine[80];
+		if (w > 80)
+		{
+			__debugbreak();
+			return;
+		}
 		
 		for (int i = 0; i < h; i++)
 		{
@@ -383,6 +387,15 @@ public:
 class GameBoard
 {
 protected:
+	enum GameState
+	{
+		PLAYING,
+		DIED,
+		LEVEL_COMPLETE,
+	};
+	GameState eState;
+
+protected:
 	int width;
 	int height;
 
@@ -394,21 +407,47 @@ public:
 		: width(w)
 		, height(h)
 		, nCurrentBoard(0)
+		, eState(PLAYING)
 	{
 		asGameBoard[0] = std::make_unique<GameCell[]>(w * h);
 		asGameBoard[1] = std::make_unique<GameCell[]>(w * h);
 
 		srand(42);
 
-		/*for (int x = 0; x < width; x++)
-		{
-			for (int y = 0; y < height; y++)
-			{
-				bool bWall = (rand() % 5 == 0);
-				WriteCell(x, y, (bWall)?(WALL):(SPACE));
-			}
-		}*/
+		InitialiseTestLevel();
 
+	}
+
+	const GameCell Cell(const int& x, const int& y) const
+	{
+		if (x >= 0 && x < width && y >= 0 && y < height)
+			return asGameBoard[!nCurrentBoard][x + width * y];
+		return SPACE;
+	}
+
+	void WriteCell(const int& x, const int& y, const GameCell& eCell)
+	{
+		static GameCell eEmptyCell = SPACE;
+		if (x >= 0 && x < width && y >= 0 && y < height)
+			asGameBoard[nCurrentBoard][x + width * y] = eCell;
+	}
+
+	void SwitchBoard()
+	{
+		for (auto x = 0; x < width; x++)
+		{
+			for (auto y = 0; y < height; y++)
+			{
+				asGameBoard[!nCurrentBoard][x + width * y] = asGameBoard[nCurrentBoard][x + width * y];
+			}
+		}
+		nCurrentBoard = !nCurrentBoard;
+	}
+
+	bool CanMove(const Pos& sPos, const Pos& sDir) {}
+
+	void InitialiseTestLevel()
+	{
 		unsigned char aui8BoardA[10][11] =
 		{
 			"    !    e",
@@ -442,125 +481,79 @@ public:
 				case 'B':
 					eCell = BLOB;
 					break;
-		}
+				}
 				WriteCell(x, y, eCell);
 			}
 		}
 
-		//WriteCell(0,0, BLOB);
-
-		//WriteCell(4, 4, BLOB);
-		//WriteCell(5, 4, BLOB);
-		//WriteCell(6, 4, BLOB);
-		//WriteCell(5, 3, BLOB);
-		//WriteCell(5, 5, BLOB);
-
-
-		//WriteCell(7, 5, BLOB);
-		//WriteCell(8, 5, BLOB);
-		//WriteCell(9, 5, BLOB);
-		//WriteCell(7, 6, BLOB);
-		////WriteCell(8, 6, BLOB);
-		//WriteCell(9, 6, BLOB);
-		//WriteCell(7, 7, BLOB);
-		//WriteCell(8, 7, BLOB);
-		//WriteCell(9, 7, BLOB);
-
-		//WriteCell(rand() % w, rand() % h, BLOB);
-
-
-		/*Cell(0,1) = BLOB;
-		Cell(0,2) = BLOB;
-		Cell(0,3) = BLOB;
-		Cell(1,3) = BLOB;
-		Cell(0,4) = BLOB;
-		Cell(1,4) = BLOB;
-		Cell(1,0) = BLOB;
-		Cell(2,0) = BLOB;
-		Cell(3,0) = BLOB;
-		Cell(4,0) = BLOB;
-		Cell(5,0) = BLOB;
-		Cell(5,1) = BLOB;
-		Cell(5,2) = BLOB;
-		Cell(5,3) = BLOB;
-		Cell(4,3) = BLOB;
-
-		Cell(8,8) = BLOB;
-		Cell(9,9) = BLOB;*/
-
 		SwitchBoard();
 		SwitchBoard();
-
 	}
 
-	const GameCell Cell(const int& x, const int& y) const
-	{
-		if (x >= 0 && x < width && y >= 0 && y < height)
-			return asGameBoard[!nCurrentBoard][x + width * y];
-		return SPACE;
-	}
-
-	void WriteCell(const int& x, const int& y, const GameCell& eCell)
-	{
-		static GameCell eEmptyCell = SPACE;
-		if (x >= 0 && x < width && y >= 0 && y < height)
-			asGameBoard[nCurrentBoard][x + width * y] = eCell;
-	}
-
-	void SwitchBoard()
-	{
-		for (auto x = 0; x < width; x++)
-		{
-			for (auto y = 0; y < height; y++)
-			{
-				asGameBoard[!nCurrentBoard][x + width * y] = asGameBoard[nCurrentBoard][x + width * y];
-			}
-		}
-		nCurrentBoard = !nCurrentBoard;
-	}
-
-	bool CanMove(const Pos& sPos, const Pos& sDir) {}
-
+public:
 	void KeyPress(wchar_t key)
 	{
-		Direction eDir = None;
-		switch (key)
+		switch (eState)
 		{
-			case L'w': 
-				eDir = Up;
-				break;
-			case L's': 
-				eDir = Down;
-				break;
-			case L'a': 
-				eDir = Left;
-				break;
-			case L'd': 
-				eDir = Right;
-				break;
-		}
-
-		for (auto x = 0; x < width; x++)
-		{
-			for (auto y = 0; y < height; y++)
+			case LEVEL_COMPLETE:
+			case DIED:
 			{
-				if (Cell(x,y) == BLOB)
+				eState = PLAYING;
+				InitialiseTestLevel();
+			}
+			break;
+			case PLAYING:
+			{
+				Direction eDir = None;
+				switch (key)
 				{
-					int nx = x;
-					int ny = y;
-					switch (eDir)
+					case L'w': 
+						eDir = Up;
+						break;
+					case L's': 
+						eDir = Down;
+						break;
+					case L'a': 
+						eDir = Left;
+						break;
+					case L'd': 
+						eDir = Right;
+						break;
+				}
+
+				for (auto x = 0; x < width; x++)
+				{
+					for (auto y = 0; y < height; y++)
 					{
-						case Up:	ny = y-1;	break;
-						case Down:	ny = y+1;	break;
-						case Left:	nx = x-1; 	break;
-						case Right: nx = x+1; 	break;
-					}
-					if (Cell(nx, ny) != WALL)
-					{
-						WriteCell(nx, ny, BLOB);
+						if (Cell(x,y) == BLOB)
+						{
+							int nx = x;
+							int ny = y;
+							switch (eDir)
+							{
+								case Up:	ny = y-1;	break;
+								case Down:	ny = y+1;	break;
+								case Left:	nx = x-1; 	break;
+								case Right: nx = x+1; 	break;
+							}
+							switch (Cell(nx, ny))
+							{
+							case EXIT:
+								eState = LEVEL_COMPLETE;
+								break;
+							case WALL:
+								break;
+							case SPIKES:
+								eState = DIED;
+								break;
+							default:
+								WriteCell(nx, ny, BLOB);
+							}
+						}
 					}
 				}
 			}
+			break;
 		}
 
 		SwitchBoard();
@@ -569,96 +562,119 @@ public:
 public:
 	void Draw(ConsoleWriter& sConsole)
 	{
-		sConsole.Background(BLACK, false);
-		sConsole.Foreground(BLACK, true);
-		for (auto x = 0; x < width; x++)
+		if (eState == PLAYING || eState == LEVEL_COMPLETE)
 		{
-			for (auto y = 0; y < height; y++)
-			{
-				GridSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
-										   y==0, x==0, y==height-1, x==width-1,
-										   g_sSingleLineBox, sConsole);
-			}
-		}
 
-		sConsole.Foreground(CYAN, false);
-		for (auto x = 0; x < width; x++)
-		{
-			for (auto y = 0; y < height; y++)
+			sConsole.Background(BLACK, false);
+			sConsole.Foreground(BLACK, true);
+			for (auto x = 0; x < width; x++)
 			{
-				if (Cell(x,y) == WALL)
+				for (auto y = 0; y < height; y++)
 				{
-					unsigned char ui8Neighbours = 0;
-					ui8Neighbours |= (Cell(x-1, y-1) == WALL)?(0x01):(0);
-					ui8Neighbours |= (Cell(x+0, y-1) == WALL)?(0x02):(0);
-					ui8Neighbours |= (Cell(x+1, y-1) == WALL)?(0x04):(0);
-					ui8Neighbours |= (Cell(x-1, y+0) == WALL)?(0x08):(0);
-					ui8Neighbours |= (Cell(x+1, y+0) == WALL)?(0x10):(0);
-					ui8Neighbours |= (Cell(x-1, y+1) == WALL)?(0x20):(0);
-					ui8Neighbours |= (Cell(x-0, y+1) == WALL)?(0x40):(0);
-					ui8Neighbours |= (Cell(x+1, y+1) == WALL)?(0x80):(0);
-
-					BlobSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
-										   ui8Neighbours, g_sSnake, sConsole);
+					GridSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
+											   y==0, x==0, y==height-1, x==width-1,
+											   g_sSingleLineBox, sConsole);
 				}
 			}
-		}
 
-		//sConsole.Background(BLUE, true);
-		sConsole.Foreground(MAGENTA, true);
+			sConsole.Foreground(CYAN, false);
+			for (auto x = 0; x < width; x++)
+			{
+				for (auto y = 0; y < height; y++)
+				{
+					if (Cell(x,y) == WALL)
+					{
+						unsigned char ui8Neighbours = 0;
+						ui8Neighbours |= (Cell(x-1, y-1) == WALL)?(0x01):(0);
+						ui8Neighbours |= (Cell(x+0, y-1) == WALL)?(0x02):(0);
+						ui8Neighbours |= (Cell(x+1, y-1) == WALL)?(0x04):(0);
+						ui8Neighbours |= (Cell(x-1, y+0) == WALL)?(0x08):(0);
+						ui8Neighbours |= (Cell(x+1, y+0) == WALL)?(0x10):(0);
+						ui8Neighbours |= (Cell(x-1, y+1) == WALL)?(0x20):(0);
+						ui8Neighbours |= (Cell(x-0, y+1) == WALL)?(0x40):(0);
+						ui8Neighbours |= (Cell(x+1, y+1) == WALL)?(0x80):(0);
+
+						BlobSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
+											   ui8Neighbours, g_sSnake, sConsole);
+					}
+				}
+			}
+
+			for (auto x = 0; x < width; x++)
+			{
+				for (auto y = 0; y < height; y++)
+				{
+					if (Cell(x, y) == SPIKES)
+					{
+						sConsole.Foreground(WHITE, true);
+						sConsole.Print(x * 6 + 1, y * 4 + 1, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+						sConsole.Print(x * 6 + 1, y * 4 + 2, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+						sConsole.Print(x * 6 + 1, y * 4 + 3, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
+
+						sConsole.Foreground(WHITE, false);
+						sConsole.Print(x * 6 + 2, y * 4 + 2, L"\u25B2");
+						sConsole.Print(x * 6 + 4, y * 4 + 3, L"\u25B2");
+						sConsole.Print(x * 6 + 5, y * 4 + 1, L"\u25B2");
+					}
+					else if (Cell(x, y) == EXIT)
+					{
+						sConsole.Foreground(WHITE, true);
+						sConsole.Background(BLACK, false);
+						sConsole.Print(x * 6 + 1, y * 4 + 0,       L"\u2591\u2592\u2593\u2592\u2591");
+						sConsole.Print(x * 6 + 0, y * 4 + 1, L"\u2591\u2592\u2554\u2550\u2557\u2592\u2591");
+						sConsole.Print(x * 6 + 0, y * 4 + 2, L"\u2592\u2593\u2551\u25D8\u2551\u2593\u2592");
+						sConsole.Print(x * 6 + 0, y * 4 + 3, L"\u2591\u2592\u255A\u2550\u255D\u2592\u2591");
+						sConsole.Print(x * 6 + 1, y * 4 + 4,       L"\u2591\u2592\u2593\u2592\u2591");
+					}
+				}
+			}
+
+			//sConsole.Background(BLUE, true);
+			sConsole.Foreground(MAGENTA, true);
 		
-		for (auto x = 0; x < width; x++)
-		{
-			for (auto y = 0; y < height; y++)
+			for (auto x = 0; x < width; x++)
 			{
-				//if (x == 5 && y == 4 || y != 3 && y != 5) continue;
-				if (Cell(x,y) == BLOB)
+				for (auto y = 0; y < height; y++)
 				{
-					unsigned char ui8Neighbours = 0;
-					ui8Neighbours |= (Cell(x-1, y-1) == BLOB)?(0x01):(0);
-					ui8Neighbours |= (Cell(x+0, y-1) == BLOB)?(0x02):(0);
-					ui8Neighbours |= (Cell(x+1, y-1) == BLOB)?(0x04):(0);
-					ui8Neighbours |= (Cell(x-1, y+0) == BLOB)?(0x08):(0);
-					ui8Neighbours |= (Cell(x+1, y+0) == BLOB)?(0x10):(0);
-					ui8Neighbours |= (Cell(x-1, y+1) == BLOB)?(0x20):(0);
-					ui8Neighbours |= (Cell(x-0, y+1) == BLOB)?(0x40):(0);
-					ui8Neighbours |= (Cell(x+1, y+1) == BLOB)?(0x80):(0);
+					//if (x == 5 && y == 4 || y != 3 && y != 5) continue;
+					if (Cell(x,y) == BLOB)
+					{
+						unsigned char ui8Neighbours = 0;
+						ui8Neighbours |= (Cell(x-1, y-1) == BLOB)?(0x01):(0);
+						ui8Neighbours |= (Cell(x+0, y-1) == BLOB)?(0x02):(0);
+						ui8Neighbours |= (Cell(x+1, y-1) == BLOB)?(0x04):(0);
+						ui8Neighbours |= (Cell(x-1, y+0) == BLOB)?(0x08):(0);
+						ui8Neighbours |= (Cell(x+1, y+0) == BLOB)?(0x10):(0);
+						ui8Neighbours |= (Cell(x-1, y+1) == BLOB)?(0x20):(0);
+						ui8Neighbours |= (Cell(x-0, y+1) == BLOB)?(0x40):(0);
+						ui8Neighbours |= (Cell(x+1, y+1) == BLOB)?(0x80):(0);
 
-					BlobSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
-										   ui8Neighbours, g_sSnake, sConsole);
+						BlobSpriteRenderer::Render(x * 6, y * 4, 7, 5, 
+											   ui8Neighbours, g_sSnake, sConsole);
+					}
 				}
 			}
 		}
-
-		for (auto x = 0; x < width; x++)
+		
+		if (eState == LEVEL_COMPLETE || eState == DIED)
 		{
-			for (auto y = 0; y < height; y++)
+			sConsole.Background(BLACK, false);
+			sConsole.Foreground(BLACK, true);
+			GridSpriteRenderer::Render(10, 10, 41, 20, true, true, true, true, g_sSingleLineBox, sConsole);
+
+			if (eState == LEVEL_COMPLETE)
 			{
-				if (Cell(x, y) == SPIKES)
-				{
-					sConsole.Foreground(WHITE, true);
-					sConsole.Print(x * 6 + 1, y * 4 + 1, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
-					sConsole.Print(x * 6 + 1, y * 4 + 2, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
-					sConsole.Print(x * 6 + 1, y * 4 + 3, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
-
-					sConsole.Foreground(WHITE, false);
-					sConsole.Print(x * 6 + 2, y * 4 + 2, L"\u25B2");
-					sConsole.Print(x * 6 + 4, y * 4 + 3, L"\u25B2");
-					sConsole.Print(x * 6 + 5, y * 4 + 1, L"\u25B2");
-				}
-				else if (Cell(x, y) == EXIT)
-				{
-					sConsole.Foreground(WHITE, true);
-					sConsole.Background(BLACK, false);
-					sConsole.Print(x * 6 + 1, y * 4 + 0,       L"\u2591\u2592\u2593\u2592\u2591");
-					sConsole.Print(x * 6 + 0, y * 4 + 1, L"\u2591\u2592\u2554\u2550\u2557\u2592\u2591");
-					sConsole.Print(x * 6 + 0, y * 4 + 2, L"\u2592\u2593\u2551\u25D8\u2551\u2593\u2592");
-					sConsole.Print(x * 6 + 0, y * 4 + 3, L"\u2591\u2592\u255A\u2550\u255D\u2592\u2591");
-					sConsole.Print(x * 6 + 1, y * 4 + 4,       L"\u2591\u2592\u2593\u2592\u2591");
-				}
+				sConsole.Foreground(MAGENTA, true);
+				sConsole.Print(12, 12, L"Level Complete!");
 			}
+			else if (eState == DIED)
+			{
+				sConsole.Foreground(RED, true);
+				sConsole.Print(12, 12, L"You died!");
+			}
+			sConsole.Foreground(WHITE, false);
+			sConsole.Print(12, 16, L"Press any key to continue");
 		}
-
 	}
 protected:
 
@@ -670,6 +686,9 @@ int main(int argc, char** argv)
 
 	ConsoleWriter sConsole;
 	GameBoard sGame(10, 10);
+
+	sGame.Draw(sConsole);
+	sConsole.Swap();
 	
 	while (1)
 	{
