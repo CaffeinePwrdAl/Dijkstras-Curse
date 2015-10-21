@@ -33,50 +33,39 @@ const int GAME_AREA_X = GAME_SIZE_X * CELL_SIZE_X + 1;
 const int GAME_AREA_Y = GAME_SIZE_Y * CELL_SIZE_Y + 1;
 
 const int SIDE_AREA_X = 0;
-const int SIDE_AREA_Y = 4;
+const int SIDE_AREA_Y = 5;
 
 struct Level
 {
-	const wchar_t strMessage[128];
-	unsigned char aui8Board[10][11];
+	const wchar_t strTitle[GAME_AREA_X + 1];
+	const wchar_t strMessage[GAME_AREA_X * 2 + 1];
+	unsigned char aui8Board[GAME_AREA_Y][GAME_AREA_X+1];
 };
 
 const Level aui8Levels[] = 
 {
 	{
-		L"When you move each cell replicates in that direction.\n" \
+		L"T1: In the beginning...",
+		L"When you move all your cells replicate in that direction.\n" \
 		 "Reach the exit portal.",
 		{
 			"B         ",
+			"     B    ",
+			"  B       ",
+			"        B ",
 			"          ",
 			"          ",
 			"          ",
-			"          ",
-			"          ",
-			"          ",
-			"          ",
-			"          ",
+			"       xxx",
 			"         e",
+			"       xxx",
 		},
 		
 	},
+
 	{
-		L"You can flow around walls.",
-		{
-			"B         ",
-			"          ",
-			"          ",
-			"          ",
-			"   xxxx   ",
-			"   x!!x   ",
-			"   xxxx   ",
-			"          ",
-			"          ",
-			"         e",
-		},
-	},
-	{
-		L"Spikes will only kill you if you move into them.\n" \
+		L"T2: Yes... Of course it has spikes!",
+		L"But they only kill you if you move into them.\n" \
 		 "You can survive if you reach the portal at the same time.",
 		 {
 			"B         ",
@@ -88,10 +77,11 @@ const Level aui8Levels[] =
 			"          ",
 			"          ",
 			"          ",
-			"!!!!!!!!!e",
+			"!!!!e!!!!!",
 		},
 	},
 	{
+		L"T3: Lone road",
 		L"Sometimes there is only one path.",
 		{
 			"Bxxxxxxxxx",
@@ -107,6 +97,7 @@ const Level aui8Levels[] =
 		},
 	},
 	{
+		L"T4: I'll take the high road, and I'll take the low road",
 		L"Sometimes you'll explore many paths at the same time.\n" \
 		 "  ... There might be bonus goals for covering extra squares.",
 		{
@@ -125,8 +116,8 @@ const Level aui8Levels[] =
 	{
 		//01234567890123456789012345678901234567890123456789012345678|
 		//0         1         2         3         4         5        |
-		L"The obvious path...\n" \
-		 "                           ... is not always the right path.\n" \
+		L"T5: The obvious path...\n",
+		L"... is not always the right path.\n" \
 		 "Bonus Goal: Cover all the open spaces",
 		{
 			"Bxxxxxxxxx",
@@ -142,6 +133,7 @@ const Level aui8Levels[] =
 		},
 	},
 	{
+		L"Section 1: Ready?",
 		L"Now you know what you're doing, it's time to begin!",
 		{
 			"xxxxxxxxxx",
@@ -157,8 +149,8 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"Level 1: 'Left Brain/Right Brain'\n" \
-		 "Bonus Goal: Cover all the open spaces",
+		L"L1: 'Left Brain/Right Brain'",
+		L"Bonus Goal: Cover all the open spaces",
 		{
 			"    !    e",
 			"  xxx  xxx",
@@ -429,8 +421,6 @@ public:
 		nCurrentBoard = !nCurrentBoard;
 	}
 
-	bool CanMove(const Pos& sPos, const Pos& sDir) {}
-
 	void InitialiseTestLevel()
 	{
 		for (int x = 0; x < 10; x++)
@@ -491,6 +481,8 @@ public:
 			break;
 			case PLAYING:
 			{
+				bool bComplete = false;
+				bool bDied = false;
 				Direction eDir = None;
 				switch (key)
 				{
@@ -526,18 +518,27 @@ public:
 							switch (Cell(nx, ny))
 							{
 							case EXIT:
-								eState = LEVEL_COMPLETE;
+								bComplete = true;
 								break;
 							case WALL:
 								break;
 							case SPIKES:
-								eState = DIED;
+								bDied = true;
 								break;
 							default:
 								WriteCell(nx, ny, BLOB);
 							}
 						}
 					}
+				}
+
+				if (bComplete)
+				{
+					eState = LEVEL_COMPLETE;
+				}
+				else if (bDied)
+				{
+					eState = DIED;
 				}
 			}
 			break;
@@ -555,9 +556,13 @@ public:
 		sConsole.Rect(0, 0,
 					  GAME_AREA_X + SIDE_AREA_X,
 					  SIDE_AREA_Y, L' ');
-		sConsole.MLPrint(1, 1, aui8Levels[nLevel].strMessage);
 
-		return;
+
+		sConsole.Foreground(MAGENTA, true);
+		sConsole.MLPrint(1, 1, aui8Levels[nLevel].strTitle);
+
+		sConsole.Foreground(WHITE, false);
+		sConsole.MLPrint(1, 3, aui8Levels[nLevel].strMessage);
 
 		if (eState == PLAYING || eState == LEVEL_COMPLETE)
 		{

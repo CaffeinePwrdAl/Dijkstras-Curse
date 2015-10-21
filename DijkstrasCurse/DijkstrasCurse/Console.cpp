@@ -144,7 +144,7 @@ void ConsoleWriter::MLPrint(int x, int y, const wchar_t* wszString)
 				continue;
 			}
 
-			if (i == 0)
+			if (i == 0) 
 			{
 				nLen = wcslen(wszString + nStartCh);
 				if (sBufferSize.X - x <= nLen)
