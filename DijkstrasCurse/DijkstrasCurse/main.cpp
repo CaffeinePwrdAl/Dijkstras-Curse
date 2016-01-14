@@ -15,7 +15,7 @@
 
 /* Size of Game Board */
 const int GAME_SIZE_X = 10;
-const int GAME_SIZE_Y = 10;
+const int GAME_SIZE_Y = 11;
 
 /* Size of Game Board Grid cell in chars */
 const int CELL_SIZE_X = 6;
@@ -39,6 +39,8 @@ struct Level
 {
 	const wchar_t strTitle[GAME_AREA_X + 1];
 	const wchar_t strMessage[GAME_AREA_X * 2 + 1];
+	unsigned char ui8BonusStars;
+	unsigned char ui8BonusSquares;
 	unsigned char aui8Board[GAME_AREA_Y][GAME_AREA_X+1];
 };
 
@@ -48,10 +50,12 @@ const Level aui8Levels[] =
 		L"T1: In the beginning...",
 		L"When you move all your cells replicate in that direction.\n" \
 		 "Reach the exit portal.",
+		0, 0,
 		{
 			"B         ",
 			"     B    ",
 			"  B       ",
+			"          ",
 			"        B ",
 			"          ",
 			"          ",
@@ -67,7 +71,9 @@ const Level aui8Levels[] =
 		L"T2: Yes... Of course it has spikes!",
 		L"But they only kill you if you move into them.\n" \
 		 "You can survive if you reach the portal at the same time.",
-		 {
+		0, 0,
+		{
+			"!!!!!!!!!!",
 			"B         ",
 			"          ",
 			"          ",
@@ -83,6 +89,7 @@ const Level aui8Levels[] =
 	{
 		L"T3: Lone road",
 		L"Sometimes there is only one path.",
+		0, 0,
 		{
 			"Bxxxxxxxxx",
 			" x      xx",
@@ -94,12 +101,14 @@ const Level aui8Levels[] =
 			" x xxxx xx",
 			" x xxxx xx",
 			"   xxxx  e",
+			"xxxxxxxxxx",
 		},
 	},
 	{
 		L"T4: I'll take the high road, and I'll take the low road",
 		L"Sometimes you'll explore many paths at the same time.\n" \
 		 "  ... There might be bonus goals for covering extra squares.",
+		0, 0,
 		{
 			"Bxxxxxxxxx",
 			" x      xx",
@@ -111,6 +120,7 @@ const Level aui8Levels[] =
 			" x xxxx xx",
 			" x xxxx xx",
 			"   xxxx  e",
+			"xxxxxxxxxx",
 		},
 	},
 	{
@@ -119,6 +129,7 @@ const Level aui8Levels[] =
 		L"T5: The obvious path...\n",
 		L"... is not always the right path.\n" \
 		 "Bonus Goal: Cover all the open spaces",
+		0, 40,
 		{
 			"Bxxxxxxxxx",
 			" x      xx",
@@ -130,12 +141,15 @@ const Level aui8Levels[] =
 			" x xxxx xx",
 			" x xxxx xx",
 			"   xxxx  e",
+			"xxxxxxxxxx",
 		},
 	},
 	{
 		L"Section 1: Ready?",
 		L"Now you know what you're doing, it's time to begin!",
+		0, 0,
 		{
+			"xxxxxxxxxx",
 			"xxxxxxxxxx",
 			"xxxxxxxxxx",
 			"xxxxxxxxxx",
@@ -149,9 +163,29 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"L1: 'Left Brain/Right Brain'",
-		L"Bonus Goal: Cover all the open spaces",
+		L"L1: 'The emergency exits are here, here, here...'",
+		L"Bonus Goal: Collect 5 Stars",
+		5, 0,
 		{
+			"!!!!!!! e!",
+			"!!xxxx! x!",
+			"!!  * * x!",
+			"!!  x!! x!",
+			"!! xxxx  !",
+			"!x B  x  !",
+			"!   x!  !!",
+			"* * xx   !",
+			"e!  *   *!",
+			"!! *  !  !",
+			"!x!! !x!e!",
+		},
+	},
+	{
+		L"L2: 'Left Brain/Right Brain'",
+		L"Bonus Goal: Cover all the open spaces",
+		0, 57,
+		{
+			"xxxxxxxxxx",
 			"    !    e",
 			"  xxx  xxx",
 			"  Bxx     ",
@@ -162,6 +196,24 @@ const Level aui8Levels[] =
 			"     xx xx",
 			"xxxx B  xx",
 			"xxxxxxxxxx",
+		},
+	},
+	{
+		L"L3: Slot Machine",
+		L"Bonus Goal: Cover all the open spaces",
+		0, 74,
+		{
+			"exxxxxxxBx",
+			" xx x     ",
+			" !     x  ",
+			" !  x    x",
+			" !    x   ",
+			" ! x    x ",
+			" !    xx  ",
+			" xx x    x",
+			"         x",
+			"    x    x",
+			"      xxxx",
 		},
 	}
 };
@@ -189,6 +241,7 @@ enum GameCell
 	BLOB,
 	SPIKES,
 	EXIT,
+	STAR,
 };
 
 struct EdgeChar
@@ -378,6 +431,10 @@ protected:
 	int nCurrentBoard;
 	std::unique_ptr<GameCell[]> asGameBoard[2];
 
+	// Per-level counters for bonus goals
+	int nStars;
+	int nSquares;
+
 public:
 	GameBoard(int w, int h)
 		: width(w)
@@ -391,8 +448,9 @@ public:
 
 		srand(42);
 
-		InitialiseTestLevel();
+		nLevel = 0;
 
+		InitialiseTestLevel();
 	}
 
 	const GameCell Cell(const int& x, const int& y) const
@@ -402,11 +460,18 @@ public:
 		return SPACE;
 	}
 
-	void WriteCell(const int& x, const int& y, const GameCell& eCell)
+	bool WriteCell(const int& x, const int& y, const GameCell& eCell)
 	{
 		static GameCell eEmptyCell = SPACE;
 		if (x >= 0 && x < width && y >= 0 && y < height)
+		{
 			asGameBoard[nCurrentBoard][x + width * y] = eCell;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	void SwitchBoard()
@@ -423,9 +488,12 @@ public:
 
 	void InitialiseTestLevel()
 	{
-		for (int x = 0; x < 10; x++)
+		nStars = 0;
+		nSquares = 0;
+
+		for (int x = 0; x < GAME_SIZE_X; x++)
 		{
-			for (int y = 0; y < 10; y++)
+			for (int y = 0; y < GAME_SIZE_Y; y++)
 			{
 				GameCell eCell = SPACE;
 				switch (aui8Levels[nLevel].aui8Board[y][x])
@@ -441,7 +509,10 @@ public:
 					break;
 				case 'B':
 					eCell = BLOB;
+					nSquares += 1;
 					break;
+				case '*':
+					eCell = STAR;
 				}
 				WriteCell(x, y, eCell);
 			}
@@ -515,18 +586,33 @@ public:
 								case Left:	nx = x-1; 	break;
 								case Right: nx = x+1; 	break;
 							}
-							switch (Cell(nx, ny))
+							const GameCell& eCell = Cell(nx, ny);
+							switch (eCell)
 							{
-							case EXIT:
-								bComplete = true;
-								break;
+							/* Immovable */
 							case WALL:
 								break;
 							case SPIKES:
 								bDied = true;
 								break;
+
+							/* Doesn't count */
+							case EXIT:
+								bComplete = true;
+								break;
+							case BLOB:
+								break;
+
+							/* Vacant Spaces */
 							default:
-								WriteCell(nx, ny, BLOB);
+								if (eCell == STAR)
+								{
+									nStars += 1;
+								}
+								if (WriteCell(nx, ny, BLOB))
+								{
+									nSquares += 1;
+								}
 							}
 						}
 					}
@@ -548,6 +634,15 @@ public:
 	}
 
 public:
+
+	static void WriteCounter(ConsoleWriter& sConsole, const int& nCount, const int& nMax, const int& x, const int& y)
+	{
+		wchar_t strCounter[25];
+		wsprintf(strCounter, L"%03d / %03d", nCount, nMax);
+		
+		sConsole.Print(x, y, strCounter);
+	}
+
 	void Draw(ConsoleWriter& sConsole)
 	{
 		const int originX = 0;
@@ -564,9 +659,19 @@ public:
 		sConsole.Foreground(WHITE, false);
 		sConsole.MLPrint(1, 3, aui8Levels[nLevel].strMessage);
 
+		sConsole.Foreground(YELLOW, true);
+		if (aui8Levels[nLevel].ui8BonusStars > 0)
+		{
+			WriteCounter(sConsole, nStars, aui8Levels[nLevel].ui8BonusStars, GAME_AREA_X - 12, 3);
+		}
+
+		if (aui8Levels[nLevel].ui8BonusSquares > 0)
+		{
+			WriteCounter(sConsole, nSquares, aui8Levels[nLevel].ui8BonusSquares, GAME_AREA_X - 12, 2);
+		}
+
 		if (eState == PLAYING || eState == LEVEL_COMPLETE)
 		{
-
 			sConsole.Background(BLACK, false);
 			sConsole.Foreground(BLACK, true);
 			for (auto x = 0; x < width; x++)
@@ -614,9 +719,11 @@ public:
 
 				for (auto y = 0; y < height; y++)
 				{
+					const GameCell& eCell = Cell(x, y);
 					const auto ypos = originY + y * CELL_SIZE_Y;
-					if (Cell(x, y) == SPIKES)
-					{							   
+					if (eCell == SPIKES)
+					{	
+						sConsole.Background(BLACK, false);
 						sConsole.Foreground(WHITE, true);
 						sConsole.Print(xpos + 1, ypos + 1, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
 						sConsole.Print(xpos + 1, ypos + 2, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
@@ -627,7 +734,7 @@ public:
 						sConsole.Print(xpos + 4, ypos + 3, L"\u25B2");
 						sConsole.Print(xpos + 5, ypos + 1, L"\u25B2");
 					}
-					else if (Cell(x, y) == EXIT)
+					else if (eCell == EXIT)
 					{
 						sConsole.Foreground(WHITE, true);
 						sConsole.Background(BLACK, false);
@@ -636,6 +743,16 @@ public:
 						sConsole.Print(xpos + 0, ypos + 2, L"\u2592\u2593\u2551\u25D8\u2551\u2593\u2592");
 						sConsole.Print(xpos + 0, ypos + 3, L"\u2591\u2592\u255A\u2550\u255D\u2592\u2591");
 						sConsole.Print(xpos + 1, ypos + 4,       L"\u2591\u2592\u2593\u2592\u2591");
+					}
+					else if (eCell == STAR)
+					{
+						sConsole.Foreground(YELLOW, false);
+						sConsole.Background(BLACK, false);
+						
+						sConsole.Print(xpos + 2, ypos + 1, L".|,"); 
+						sConsole.Print(xpos + 1, ypos + 2, L"-=O=-"); 
+						sConsole.Print(xpos + 2, ypos + 3, L"'|`"); 
+						
 					}
 				}
 			}
