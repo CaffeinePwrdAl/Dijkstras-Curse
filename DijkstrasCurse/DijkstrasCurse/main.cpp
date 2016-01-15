@@ -64,7 +64,6 @@ const Level aui8Levels[] =
 			"         e",
 			"       xxx",
 		},
-		
 	},
 
 	{
@@ -215,7 +214,43 @@ const Level aui8Levels[] =
 			"    x    x",
 			"      xxxx",
 		},
-	}
+	},
+	{
+		L"TEST1: Like a knife through shark infested custard.",
+		L"",
+		0, 0,
+		{	
+			"B         ",
+			"MMMMMMMMMM",
+			"          ",
+			"  !    !  ",
+			"    !    !",
+			"          ",
+			"      !   ",
+			"          ",
+			" !   !   x",
+			"   !     e",
+			"         x",
+		},
+	},
+	{
+		L"TEST1: Like a knife through shark infested custard.",
+		L"",
+		0, 0,
+		{	
+			"Bx        ",
+			" x        ",
+			" x        ",
+			" x       B",
+			" x        ",
+			" M        ",
+			" xxxxxxxxx",
+			"          ",
+			" xxxxxxxx ",
+			"!xxxxxxxx ",
+			"xxxxxxxxxe",
+		},
+	},
 };
 const int numLevels = sizeof(aui8Levels) / sizeof(aui8Levels[0]);
 
@@ -242,6 +277,7 @@ enum GameCell
 	SPIKES,
 	EXIT,
 	STAR,
+	MOVEABLE,
 };
 
 struct EdgeChar
@@ -474,6 +510,19 @@ public:
 		}
 	}
 
+	bool MoveInDir(Direction eDir, int& x, int& y) const
+	{
+		switch (eDir)
+		{
+		case Up:	y = y - 1; break;
+		case Down:	y = y + 1; break;
+		case Left:	x = x - 1; break;
+		case Right: x = x + 1; break;
+		}
+
+		return (x >= 0 && x < width && y >= 0 && y < height);
+	}
+
 	void SwitchBoard()
 	{
 		for (auto x = 0; x < width; x++)
@@ -513,6 +562,10 @@ public:
 					break;
 				case '*':
 					eCell = STAR;
+					break;
+				case 'M':
+					eCell = MOVEABLE;
+					break;
 				}
 				WriteCell(x, y, eCell);
 			}
@@ -530,9 +583,30 @@ public:
 public:
 	void KeyPress(wchar_t key)
 	{
+		if (key == L'r')
+		{
+			eState = PLAYING;
+			InitialiseTestLevel();
+			SwitchBoard();
+			return;
+		}
+
 		if (key == L'n')
 		{
-			eState = LEVEL_COMPLETE;
+			eState = PLAYING;
+			NextLevel();
+			InitialiseTestLevel();
+			SwitchBoard();
+			return;
+		}
+
+		if (key == L'm')
+		{
+			nLevel = (nLevel + numLevels - 1) % (numLevels);
+			eState = PLAYING;
+			InitialiseTestLevel();
+			SwitchBoard();
+			return;
 		}
 
 		switch (eState)
@@ -577,41 +651,73 @@ public:
 					{
 						if (Cell(x,y) == BLOB)
 						{
+							bool bBlockedMove = true;
+
 							int nx = x;
 							int ny = y;
-							switch (eDir)
+							
+							if (!MoveInDir(eDir, nx, ny))
 							{
-								case Up:	ny = y-1;	break;
-								case Down:	ny = y+1;	break;
-								case Left:	nx = x-1; 	break;
-								case Right: nx = x+1; 	break;
+								/* Early exit - invalid square */
+								continue;
 							}
+
 							const GameCell& eCell = Cell(nx, ny);
 							switch (eCell)
 							{
-							/* Immovable */
-							case WALL:
-								break;
-							case SPIKES:
-								bDied = true;
+								/* Immovable */
+								case WALL:
+									break;
+								case SPIKES:
+									bDied = true;
+									break;
+
+								/* Doesn't count */
+								case EXIT:
+									bComplete = true;
+									break;
+								case BLOB:
+									break;
+
+								/* Moveable */
+								case MOVEABLE:
+								{
+									int mx = nx, my = ny;
+									/* If move is on game board */
+									if (MoveInDir(eDir, mx, my))
+									{
+										/* Check that the moveable block can move */
+										const GameCell& eMvNeighbour = Cell(mx, my);
+										switch (eMvNeighbour)
+										{
+										/* These are passable spaces */
+										case SPACE:
+										case STAR:
+											WriteCell(mx, my, MOVEABLE);
+											bBlockedMove = false;
+											break;
+
+										/* Anything else cant be moved over */
+										default:
+											break;
+										}
+									}
+								}
 								break;
 
-							/* Doesn't count */
-							case EXIT:
-								bComplete = true;
-								break;
-							case BLOB:
-								break;
+								/* All other cells can be moved to */
+								default:
+									bBlockedMove = false;
+							}
 
-							/* Vacant Spaces */
-							default:
+							/* If movement was valid, update cell and counters */
+							if (bBlockedMove == false)
+							{
+								WriteCell(nx, ny, BLOB);
+								nSquares += 1;
 								if (eCell == STAR)
 								{
 									nStars += 1;
-								}
-								if (WriteCell(nx, ny, BLOB))
-								{
-									nSquares += 1;
 								}
 							}
 						}
@@ -752,7 +858,14 @@ public:
 						sConsole.Print(xpos + 2, ypos + 1, L".|,"); 
 						sConsole.Print(xpos + 1, ypos + 2, L"-=O=-"); 
 						sConsole.Print(xpos + 2, ypos + 3, L"'|`"); 
-						
+					}
+					else if (eCell == MOVEABLE)
+					{
+						sConsole.Foreground(WHITE, true);
+						sConsole.Background(BLACK, false);
+						sConsole.Print(xpos + 1, ypos + 1, L"\u2592\u2593\u2592\u2591\u2591");
+						sConsole.Print(xpos + 1, ypos + 2, L"\u2591\u2592\u2593\u2592\u2591");
+						sConsole.Print(xpos + 1, ypos + 3, L"\u2591\u2591\u2592\u2593\u2592");
 					}
 				}
 			}
