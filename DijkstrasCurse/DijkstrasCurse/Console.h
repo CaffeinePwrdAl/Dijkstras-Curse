@@ -32,6 +32,7 @@ public:
 
 	void Rect(int x, int y, int w, int h, const wchar_t& wc);
 	void Print(int x, int y, const wchar_t* wszString);
+	void Printn(int x, int y, const wchar_t* wszString, int nChars);
 	void MLPrint(int x, int y, const wchar_t* wszString);
 	void Swap();
 

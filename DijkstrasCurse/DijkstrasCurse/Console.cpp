@@ -118,6 +118,27 @@ void ConsoleWriter::Print(int x, int y, const wchar_t* wszString)
 	}
 }
 
+void ConsoleWriter::Printn(int x, int y, const wchar_t* wszString, int nChars)
+{
+	if (y < sBufferSize.Y)
+	{
+		COORD sCoord = { (SHORT) x, (SHORT) y };
+		size_t nLen = min(wcslen(wszString), nChars);
+		if (sBufferSize.X - x < nLen)
+		{
+			nLen = sBufferSize.X - x;
+		}
+
+		size_t nOffset = x + y * sBufferSize.X;
+		for (auto i = 0; i < nLen; i++)
+		{
+			asConsoleBuffer[nOffset].Attributes = colourCode;
+			asConsoleBuffer[nOffset].Char.UnicodeChar = wszString[i];
+			nOffset++;
+		}
+	}
+}
+
 void ConsoleWriter::MLPrint(int x, int y, const wchar_t* wszString)
 {
 	if (y < sBufferSize.Y)

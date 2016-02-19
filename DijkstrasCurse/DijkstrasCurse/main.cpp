@@ -234,7 +234,7 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"TEST1: Like a knife through shark infested custard.",
+		L"TEST1: To Me, To You.",
 		L"",
 		0, 0,
 		{	
@@ -248,7 +248,7 @@ const Level aui8Levels[] =
 			"          ",
 			" xxxxxxxx ",
 			"!xxxxxxxx ",
-			"xxxxxxxxxe",
+			"xxxxxxxxxE",
 		},
 	},
 };
@@ -471,6 +471,9 @@ protected:
 	int nStars;
 	int nSquares;
 
+	// Frame Count
+	int nFrame;
+
 public:
 	GameBoard(int w, int h)
 		: width(w)
@@ -478,6 +481,7 @@ public:
 		, nLevel(0)
 		, nCurrentBoard(0)
 		, eState(PLAYING)
+		, nFrame(0)
 	{
 		asGameBoard[0] = std::make_unique<GameCell[]>(w * h);
 		asGameBoard[1] = std::make_unique<GameCell[]>(w * h);
@@ -863,9 +867,16 @@ public:
 					{
 						sConsole.Foreground(WHITE, true);
 						sConsole.Background(BLACK, false);
-						sConsole.Print(xpos + 1, ypos + 1, L"\u2592\u2593\u2592\u2591\u2591");
-						sConsole.Print(xpos + 1, ypos + 2, L"\u2591\u2592\u2593\u2592\u2591");
-						sConsole.Print(xpos + 1, ypos + 3, L"\u2591\u2591\u2592\u2593\u2592");
+
+						/* Gradient pattern, 3 repeats */
+						wchar_t *strGradient = L"\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591";
+
+						/* Animation test */
+						int nOffset = 5;// + (nFrame % 5);
+
+						sConsole.Printn(xpos + 1, ypos + 1, strGradient + nOffset, 5);
+						sConsole.Printn(xpos + 1, ypos + 2, strGradient + nOffset - 1, 5);
+						sConsole.Printn(xpos + 1, ypos + 3, strGradient + nOffset - 2, 5);
 					}
 				}
 			}
@@ -919,6 +930,7 @@ public:
 			sConsole.Foreground(WHITE, false);
 			sConsole.Print(12, 16, L"Press any key to continue");
 		}
+		nFrame++;
 	}
 };
 
@@ -1004,34 +1016,58 @@ int main(int argc, char** argv)
 
 	sConsole.Swap();
 	
-	while (1)
+	bool bRunning = true;
+	while (bRunning)
 	{
-		if (WaitForSingleObject(hIn, INFINITE) != WAIT_OBJECT_0)
-            break;
+		/* Wait is the game time step in ms - or INFINITE for no display update tick */
+		DWORD nWaitStatus = WaitForSingleObject(hIn, INFINITE);	
 
-		INPUT_RECORD InRec;
-        DWORD numRead;
-        if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
-            break;
- 
-        if ((InRec.EventType == KEY_EVENT) &&
-            InRec.Event.KeyEvent.bKeyDown)
-        {
-			wchar_t ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
+		switch (nWaitStatus)
+		{
+			case WAIT_OBJECT_0:
+			{
+				INPUT_RECORD InRec;
+				DWORD numRead;
+				if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
+				{
+					bRunning = false;
+					continue;
+				}
+				
+				if ((InRec.EventType == KEY_EVENT) &&
+					InRec.Event.KeyEvent.bKeyDown)
+				{
+					wchar_t ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
 
-			/*wchar_t astr[] = L"XX";
-			wsprintf(astr, L"%02X", ch);
-			sConsole.Foreground(WHITE, false);
-			sConsole.Print(62, 38, astr);*/
+					/*wchar_t astr[] = L"XX";
+					wsprintf(astr, L"%02X", ch);
+					sConsole.Foreground(WHITE, false);
+					sConsole.Print(62, 38, astr);*/
 
-			sGame.KeyPress(ch);
+					sGame.KeyPress(ch);
 
-			if (ch == 0x1B) break;
-        }
+					if (ch == 0x1B)
+					{
+						bRunning = false;
+						continue;
+					}
+				}
+			}
+			/* Fall through */
 
-		sGame.Draw(sConsole);
+			case WAIT_TIMEOUT:
+				sGame.Draw(sConsole);
+				sConsole.Swap();
+				break;
 
-		sConsole.Swap();
+			default:
+			case WAIT_ABANDONED:
+			case WAIT_FAILED:
+				printf("Something went wrong: WaitForSingleObject -> 0x%x\n", nWaitStatus);
+				bRunning = false;
+				continue;
+		}
+
     }
 
 	wchar_t chars[] = { 0x2588, 0x2593, 0x2592, 0x2591, 0};
