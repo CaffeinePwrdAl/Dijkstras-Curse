@@ -35,6 +35,31 @@ const int GAME_AREA_Y = GAME_SIZE_Y * CELL_SIZE_Y + 1;
 const int SIDE_AREA_X = 0;
 const int SIDE_AREA_Y = 5;
 
+#if defined (_DEBUG)
+const int DEBUG_LINE_LEN = 80;
+const int DEBUG_AREA_X = DEBUG_LINE_LEN + 2;
+#else
+const int DEBUG_AREA_X = 0;
+#endif
+
+const int MAX_LINE_LENGTH = GAME_AREA_X + SIDE_AREA_X + DEBUG_AREA_X + 1;
+
+#if defined (_DEBUG)
+const int DEBUG_LOG_LEN = GAME_AREA_Y + SIDE_AREA_Y - 2;
+wchar_t g_astrDebugLog[DEBUG_LOG_LEN][DEBUG_LINE_LEN + 1];
+int g_nDebugLogNext = 0;
+int g_nDebugLogStart = DEBUG_LOG_LEN;
+#define WRITE_DEBUG_LOG(...) \
+	do \
+	{ \
+		swprintf_s(g_astrDebugLog[g_nDebugLogNext], DEBUG_LINE_LEN, __VA_ARGS__); \
+		g_nDebugLogNext = (g_nDebugLogNext + 1) % DEBUG_LOG_LEN; \
+		g_nDebugLogStart = (g_nDebugLogStart + 1) % DEBUG_LOG_LEN; \
+	} while(0)
+#else
+#define WRITE_DEBUG_LOG(...)
+#endif
+
 struct Level
 {
 	const wchar_t strTitle[GAME_AREA_X + 1];
@@ -423,12 +448,12 @@ public:
 
 		asChars[1][1] = sData.fill;
 		
-		wchar_t asLine[80];
-		if (w+1 > 80)
+		wchar_t asLine[MAX_LINE_LENGTH];
+		/*if (w+1 > 80)
 		{
 			__debugbreak();
 			return;
-		}
+		}*/
 		
 		for (int i = 0; i <= h; i++)
 		{
@@ -571,19 +596,6 @@ public:
 		}
 	}
 
-	bool MoveInDir(Direction eDir, int& x, int& y) const
-	{
-		switch (eDir)
-		{
-		case Up:	y = y - 1; break;
-		case Down:	y = y + 1; break;
-		case Left:	x = x - 1; break;
-		case Right: x = x + 1; break;
-		}
-
-		return (x >= 0 && x < width && y >= 0 && y < height);
-	}
-
 	void SwitchBoard()
 	{
 		for (auto x = 0; x < width; x++)
@@ -645,6 +657,19 @@ public:
 	}
 
 protected:
+	bool MoveInDir(Direction eDir, int& x, int& y) const
+	{
+		switch (eDir)
+		{
+		case Up:	y = y - 1; break;
+		case Down:	y = y + 1; break;
+		case Left:	x = x - 1; break;
+		case Right: x = x + 1; break;
+		}
+
+		return (x >= 0 && x < width && y >= 0 && y < height);
+	}
+
 	bool MoveableBlockCanMove(const int& x, const int& y, const Direction& eDir)
 	{
 		bool bBlockedMove = true;
@@ -670,11 +695,14 @@ protected:
 			}
 		}
 
-		return bBlockedMove;
+		return (bBlockedMove == false);
 	}
 
 	bool MoveQuantumBlocks(const Direction& eDir)
 	{
+		WRITE_DEBUG_LOG(L"MoveQuantumBlocks():");
+		WRITE_DEBUG_LOG(L"  Check quantum blocks for free movement:");
+
 		bool bBlockedMove = false;
 		for (auto x = 0; x < width; x++)
 		{
@@ -682,9 +710,20 @@ protected:
 			{
 				if (Cell(x, y) == QUANTUM)
 				{
+#if defined (_DEBUG)
+					int mx = x, my = y;
+					MoveInDir(eDir, mx, my);
+#endif
+
+					WRITE_DEBUG_LOG(L"    Check Quantum block @ (%d, %d) to (%d, %d)", x, y, mx, my);
 					if (!MoveableBlockCanMove(x, y, eDir))
 					{
+						WRITE_DEBUG_LOG(L"     -> Blocked!");
 						bBlockedMove = true;
+					}
+					else
+					{
+						WRITE_DEBUG_LOG(L"     -> Can Move");
 					}
 				}
 			}
@@ -692,6 +731,7 @@ protected:
 
 		if (bBlockedMove == false)
 		{
+			WRITE_DEBUG_LOG(L"Applying quantum block movement:");
 			for (auto x = 0; x < width; x++)
 			{
 				for (auto y = 0; y < height; y++)
@@ -701,12 +741,18 @@ protected:
 						int mx = x, my = y;
 						MoveInDir(eDir, mx, my);
 
+						WRITE_DEBUG_LOG(L"    Move Quantum block from (%d, %d) to (%d, %d)", x, y, mx, my);
+
 						// Might need to add all moves to a queue and then process
 						WriteCell(x, y, SPACE);
 						WriteCell(mx, my, QUANTUM);
 					}
 				}
 			}
+		}
+		else
+		{
+			WRITE_DEBUG_LOG(L"Quantum blockage detected");
 		}
 
 		return bBlockedMove;
@@ -1078,7 +1124,7 @@ int main(int argc, char** argv)
 {
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 
-	ConsoleWriter sConsole(GAME_AREA_X + SIDE_AREA_X,
+	ConsoleWriter sConsole(GAME_AREA_X + SIDE_AREA_X + DEBUG_AREA_X,
 						   GAME_AREA_Y + SIDE_AREA_Y);
 	GameBoard sGame(GAME_SIZE_X, GAME_SIZE_Y);
 
@@ -1152,7 +1198,7 @@ int main(int argc, char** argv)
 	sConsole.Swap();
 
 	sGame.Draw(sConsole);
-	system("pause");
+	//system("pause");
 
 	sConsole.Swap();
 	
@@ -1196,9 +1242,31 @@ int main(int argc, char** argv)
 			/* Fall through */
 
 			case WAIT_TIMEOUT:
+			{
 				sGame.Draw(sConsole);
+
+#if defined (_DEBUG)
+				{
+					sConsole.Foreground(WHITE, false);
+
+					// Border around the debug area
+					GridSpriteRenderer::Render(GAME_AREA_X + SIDE_AREA_X, 0,
+						DEBUG_AREA_X - 1, GAME_AREA_Y + SIDE_AREA_Y - 1,
+						true, true, true, true,
+						g_sSingleLineBox, sConsole);
+
+					// Dump the log buffer
+					int entry = g_nDebugLogStart;
+					for (auto i = 0; i < DEBUG_LOG_LEN; i++)
+					{
+						sConsole.Print(GAME_AREA_X + SIDE_AREA_X + 1, 1 + i, g_astrDebugLog[entry]);
+						entry = (entry + 1) % DEBUG_LOG_LEN;
+					}
+				}
+#endif
 				sConsole.Swap();
-				break;
+			}
+			break;
 
 			default:
 			case WAIT_ABANDONED:
