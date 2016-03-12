@@ -117,9 +117,9 @@ const Level aui8Levels[] =
 			" x      xx",
 			" x xxxx xx",
 			" x xxxx xx",
-			" x xxxx xx",
-			"   xxxx  e",
-			"xxxxxxxxxx",
+" x xxxx xx",
+"   xxxx  e",
+"xxxxxxxxxx",
 		},
 	},
 	{
@@ -216,8 +216,28 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"TEST1: Like a knife through shark infested custard.",
-		L"",
+		L"Section 2: 'Ooooh, push it...'",
+		L"   '... push it real good...'\n" \
+		L"Yeah, Ok, I'll stop now.",
+		0, 0,
+		{
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"B   M     ",
+			"xxxxxxxxex",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+			"xxxxxxxxxx",
+		},
+	},
+	{
+		L"M1: Like a knife through shark infested custard?",
+		L"or a shark through knife infected custard.\n" \
+		L"... I can never remember which is which.",
 		0, 0,
 		{	
 			"B         ",
@@ -234,7 +254,7 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"TEST1: To Me, To You.",
+		L"M2: To Me, To You.",
 		L"",
 		0, 0,
 		{	
@@ -248,7 +268,43 @@ const Level aui8Levels[] =
 			"          ",
 			" xxxxxxxx ",
 			"!xxxxxxxx ",
-			"xxxxxxxxxE",
+			"xxxxxxxxxe",
+		},
+	},
+	{
+		L"M3: The Medusa Cascade",
+		L"Bonus Goal: Cover all the open spaces",
+		0, 61,
+		{
+			"Bx        ",
+			" MB       ",
+			" xxxxxxxx ",
+			"       M  ",
+			" xxxxxxxx ",
+			"!!xx      ",
+			"!!   xxxx ",
+			"!x x   xx!",
+			"xx x     !",
+			"BM xxxxx !",
+			"BBBxe    !",
+		},
+	},
+	{
+		L"M2: To Me, To You.",
+		L"",
+		0, 0,
+		{
+			"Bx        ",
+			" x        ",
+			" x        ",
+			" x   Q   B",
+			" x        ",
+			" B  Q     ",
+			" xxxBxxxxx",
+			"          ",
+			" xxxxxxxx ",
+			"!xxxxxxxx ",
+			"xxxxxxxxxe",
 		},
 	},
 };
@@ -278,6 +334,7 @@ enum GameCell
 	EXIT,
 	STAR,
 	MOVEABLE,
+	QUANTUM,
 };
 
 struct EdgeChar
@@ -570,6 +627,9 @@ public:
 				case 'M':
 					eCell = MOVEABLE;
 					break;
+				case 'Q':
+					eCell = QUANTUM;
+					break;
 				}
 				WriteCell(x, y, eCell);
 			}
@@ -582,6 +642,74 @@ public:
 	void NextLevel()
 	{
 		nLevel = (nLevel+1)%(numLevels);
+	}
+
+protected:
+	bool MoveableBlockCanMove(const int& x, const int& y, const Direction& eDir)
+	{
+		bool bBlockedMove = true;
+
+		int mx = x, my = y;
+
+		/* Get coords of movement if move is on game board */
+		if (MoveInDir(eDir, mx, my))
+		{
+			/* Check that the moveable block can move */
+			const GameCell& eMvNeighbour = Cell(mx, my);
+			switch (eMvNeighbour)
+			{
+				/* These are passable spaces */
+				case SPACE:
+				case STAR:
+					bBlockedMove = false;
+					break;
+
+				/* Anything else cant be moved over */
+			default:
+				break;
+			}
+		}
+
+		return bBlockedMove;
+	}
+
+	bool MoveQuantumBlocks(const Direction& eDir)
+	{
+		bool bBlockedMove = false;
+		for (auto x = 0; x < width; x++)
+		{
+			for (auto y = 0; y < height; y++)
+			{
+				if (Cell(x, y) == QUANTUM)
+				{
+					if (!MoveableBlockCanMove(x, y, eDir))
+					{
+						bBlockedMove = true;
+					}
+				}
+			}
+		}
+
+		if (bBlockedMove == false)
+		{
+			for (auto x = 0; x < width; x++)
+			{
+				for (auto y = 0; y < height; y++)
+				{
+					if (Cell(x, y) == QUANTUM)
+					{
+						int mx = x, my = y;
+						MoveInDir(eDir, mx, my);
+
+						// Might need to add all moves to a queue and then process
+						WriteCell(x, y, SPACE);
+						WriteCell(mx, my, QUANTUM);
+					}
+				}
+			}
+		}
+
+		return bBlockedMove;
 	}
 
 public:
@@ -656,6 +784,7 @@ public:
 						if (Cell(x,y) == BLOB)
 						{
 							bool bBlockedMove = true;
+							bool bMovedQuantum = false;
 
 							int nx = x;
 							int ny = y;
@@ -682,6 +811,17 @@ public:
 									break;
 								case BLOB:
 									break;
+
+								/* Quantum Moveable */
+								case QUANTUM:
+								{
+									if (!bMovedQuantum)
+									{
+										bBlockedMove = MoveQuantumBlocks(eDir);
+										bMovedQuantum = true;
+									}
+								}
+								break;
 
 								/* Moveable */
 								case MOVEABLE:
@@ -863,9 +1003,9 @@ public:
 						sConsole.Print(xpos + 1, ypos + 2, L"-=O=-"); 
 						sConsole.Print(xpos + 2, ypos + 3, L"'|`"); 
 					}
-					else if (eCell == MOVEABLE)
+					else if (eCell == MOVEABLE || eCell == QUANTUM)
 					{
-						sConsole.Foreground(WHITE, true);
+						sConsole.Foreground((eCell == MOVEABLE)?(WHITE):(BLUE), true);
 						sConsole.Background(BLACK, false);
 
 						/* Gradient pattern, 3 repeats */
