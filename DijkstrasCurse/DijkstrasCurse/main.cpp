@@ -4,7 +4,7 @@
 #include "Console.h"
 //#define WIN32_LEAN_AND_MEAN
 //#define VC_EXTRALEAN
-//#include <vector>
+#include <vector>
 //#include <string>
 //#include <memory>
 //
@@ -20,6 +20,12 @@ const int GAME_SIZE_Y = 11;
 /* Size of Game Board Grid cell in chars */
 const int CELL_SIZE_X = 6;
 const int CELL_SIZE_Y = 4;
+
+struct Position
+{
+	int x;
+	int y;
+};
 
 /*
  * Total dimensions of game area in chars
@@ -241,8 +247,7 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"Section 2: 'Ooooh, push it...'",
-		L"   '... push it real good...'\n" \
+		L"Section 2: Ooooh, push it, push it real good",
 		L"Yeah, Ok, I'll stop now.",
 		0, 0,
 		{
@@ -260,9 +265,9 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"M1: Like a knife through shark infested custard?",
-		L"or a shark through knife infected custard.\n" \
-		L"... I can never remember which is which.",
+		L"M1: Like a knife through shark infested custard.",
+		L"or is it a custard infested shark through knives?\n" \
+		L"                    ... I can never remember.",
 		0, 0,
 		{	
 			"B         ",
@@ -315,21 +320,22 @@ const Level aui8Levels[] =
 		},
 	},
 	{
-		L"M2: To Me, To You.",
-		L"",
+		L"M3: 'But they are the gatekeepers'",
+		L"They are guarding all the doors, they are holding all the\n"\
+		L"keys -- Morpheus.",
 		0, 0,
 		{
-			"Bx        ",
-			" x        ",
-			" x        ",
-			" x   Q   B",
-			" x        ",
-			" B  Q     ",
-			" xxxBxxxxx",
-			"          ",
-			" xxxxxxxx ",
-			"!xxxxxxxx ",
-			"xxxxxxxxxe",
+			"xQxxxx  M ",
+			"xQxQx xQx ",
+			"x x x x x ",
+			"xQx xQxQxB",
+			"xQxQxQx xx",
+			"B  Q Q Q e",
+			"xQxQx x xx",
+			"x xQx x xx",
+			"x x x x xx",
+			"x x xxxxxx",
+			"xxx xxxxxx",
 		},
 	},
 };
@@ -343,11 +349,20 @@ struct Pos
 
 enum Direction
 {
-	None,
+	None = 0,
 	Up,
 	Down,
 	Left,
 	Right,
+};
+
+const wchar_t* g_asDirectionStrings[] =
+{
+	L"None",
+	L"Up",
+	L"Down",
+	L"Left",
+	L"Right",
 };
 
 enum GameCell
@@ -698,62 +713,93 @@ protected:
 		return (bBlockedMove == false);
 	}
 
+	bool QuantumBlockCanMove(const int& x, const int& y, const Direction& eDir)
+	{
+		bool bBlockedMove = true;
+
+		int mx = x, my = y;
+
+		/* Get coords of movement if move is on game board */
+		if (MoveInDir(eDir, mx, my))
+		{
+			/* Check that the moveable block can move */
+			const GameCell& eMvNeighbour = Cell(mx, my);
+			switch (eMvNeighbour)
+			{
+				/* These are passable spaces */
+			case SPACE:
+			case STAR:
+			case QUANTUM:
+				bBlockedMove = false;
+				break;
+
+				/* Anything else cant be moved over */
+			default:
+				break;
+			}
+		}
+
+		return (bBlockedMove == false);
+	}
+
 	bool MoveQuantumBlocks(const Direction& eDir)
 	{
-		WRITE_DEBUG_LOG(L"MoveQuantumBlocks():");
-		WRITE_DEBUG_LOG(L"  Check quantum blocks for free movement:");
-
 		bool bBlockedMove = false;
+		std::vector<Position> asQuantumBlocks;
+
+		WRITE_DEBUG_LOG(L"MoveQuantumBlocks():");
+
+		WRITE_DEBUG_LOG(L"  Moving quantum blocks out of phase:");
 		for (auto x = 0; x < width; x++)
 		{
 			for (auto y = 0; y < height; y++)
 			{
 				if (Cell(x, y) == QUANTUM)
 				{
-#if defined (_DEBUG)
-					int mx = x, my = y;
-					MoveInDir(eDir, mx, my);
-#endif
-
-					WRITE_DEBUG_LOG(L"    Check Quantum block @ (%d, %d) to (%d, %d)", x, y, mx, my);
-					if (!MoveableBlockCanMove(x, y, eDir))
-					{
-						WRITE_DEBUG_LOG(L"     -> Blocked!");
-						bBlockedMove = true;
-					}
-					else
-					{
-						WRITE_DEBUG_LOG(L"     -> Can Move");
-					}
+					WRITE_DEBUG_LOG(L"    Dephased Quantum block @ (%d, %d)", x, y);
+					asQuantumBlocks.push_back({ x, y });
+					WriteCell(x, y, SPACE);
 				}
+			}
+		}
+
+		WRITE_DEBUG_LOG(L"  Checking quantum blocks for free movement:");
+		for (const auto& pos : asQuantumBlocks)
+		{
+			WRITE_DEBUG_LOG(L"    Check Quantum block @ (%d, %d) can move %s", pos.x, pos.y, g_asDirectionStrings[eDir]);
+			if (!QuantumBlockCanMove(pos.x, pos.y, eDir))
+			{
+				WRITE_DEBUG_LOG(L"     -> Blocked!");
+				bBlockedMove = true;
+			}
+			else
+			{
+				WRITE_DEBUG_LOG(L"     -> Can Move");
 			}
 		}
 
 		if (bBlockedMove == false)
 		{
 			WRITE_DEBUG_LOG(L"Applying quantum block movement:");
-			for (auto x = 0; x < width; x++)
+			for (auto&& pos : asQuantumBlocks)
 			{
-				for (auto y = 0; y < height; y++)
-				{
-					if (Cell(x, y) == QUANTUM)
-					{
-						int mx = x, my = y;
-						MoveInDir(eDir, mx, my);
-
-						WRITE_DEBUG_LOG(L"    Move Quantum block from (%d, %d) to (%d, %d)", x, y, mx, my);
-
-						// Might need to add all moves to a queue and then process
-						WriteCell(x, y, SPACE);
-						WriteCell(mx, my, QUANTUM);
-					}
-				}
+				MoveInDir(eDir, pos.x, pos.y);
+				WRITE_DEBUG_LOG(L"    Moved Quantum block to (%d, %d)", pos.x, pos.y);
 			}
 		}
 		else
 		{
 			WRITE_DEBUG_LOG(L"Quantum blockage detected");
 		}
+
+		// Re-phase the quantum blocks
+		WRITE_DEBUG_LOG(L"  Moving quantum blocks back into phase:");
+		for (const auto& pos : asQuantumBlocks)
+		{
+			WriteCell(pos.x, pos.y, QUANTUM);
+		}
+
+		WRITE_DEBUG_LOG(L"");
 
 		return bBlockedMove;
 	}

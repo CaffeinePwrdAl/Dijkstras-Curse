@@ -10,12 +10,6 @@ ConsoleWriter::ConsoleWriter(SHORT width, SHORT height)
 
 	CreateScreenBuffer();
 
-	DWORD eError = GetLastError();
-	if (eError != S_OK)
-	{
-		__debugbreak();
-	}
-
 	// Hide the cursor
 	CONSOLE_CURSOR_INFO sCCI = { 0 };
 	sCCI.bVisible = FALSE;
@@ -120,7 +114,12 @@ bool ConsoleWriter::CreateScreenBuffer()
 
 	// Make the window the desired size now
 	SMALL_RECT sRect = { 0, 0, sBufferSize.X - 1, sBufferSize.Y - 1 };
-	SetConsoleWindowInfo(hScreenBuffer, TRUE, &sRect);
+	if (!SetConsoleWindowInfo(hScreenBuffer, TRUE, &sRect))
+	{
+		DWORD eError = GetLastError();
+		fprintf(stderr, "SetConsoleWindowInfo failed - (%d)\n", eError);
+		return false;
+	}
 
 	asConsoleBuffer = std::make_unique<CHAR_INFO[]>(sBufferSize.X * sBufferSize.Y);
 
