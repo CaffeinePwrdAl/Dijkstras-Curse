@@ -1,436 +1,18 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
-
+#include <stdio.h>
+#include <wchar.h>
+#include <string>
 #include "Console.h"
-//#define WIN32_LEAN_AND_MEAN
-//#define VC_EXTRALEAN
 #include <vector>
-//#include <string>
-//#include <memory>
-//
-//#include <Windows.h>
-//#include <WinCon.h>
-//#include <io.h>
-//#include <fcntl.h>
+#include <memory>
 
-/* Size of Game Board */
-const int GAME_SIZE_X = 10;
-const int GAME_SIZE_Y = 11;
+#include "defs.h"
+#include "levels.h"
 
-/* Size of Game Board Grid cell in chars */
-const int CELL_SIZE_X = 6;
-const int CELL_SIZE_Y = 4;
-
-struct Position
-{
-	int x;
-	int y;
-};
-
-/*
- * Total dimensions of game area in chars
- *
- *   n*w + 1
- *   m*h + 1
- *
- * to account for the closing edge of characters.
- */
-const int GAME_AREA_X = GAME_SIZE_X * CELL_SIZE_X + 1;
-const int GAME_AREA_Y = GAME_SIZE_Y * CELL_SIZE_Y + 1;
-
-const int SIDE_AREA_X = 0;
-const int SIDE_AREA_Y = 5;
-
-#if defined (_DEBUG)
-const int DEBUG_LINE_LEN = 80;
-const int DEBUG_AREA_X = DEBUG_LINE_LEN + 2;
-#else
-const int DEBUG_AREA_X = 0;
+#if !defined(swprintf)
+#define swprintf(a,b,c,...) wprintf(a,c,__VA_ARGS__)
 #endif
-
-const int MAX_LINE_LENGTH = GAME_AREA_X + SIDE_AREA_X + DEBUG_AREA_X + 1;
-
-#if defined (_DEBUG)
-const int DEBUG_LOG_LEN = GAME_AREA_Y + SIDE_AREA_Y - 2;
-wchar_t g_astrDebugLog[DEBUG_LOG_LEN][DEBUG_LINE_LEN + 1];
-int g_nDebugLogNext = 0;
-int g_nDebugLogStart = DEBUG_LOG_LEN;
-#define WRITE_DEBUG_LOG(...) \
-	do \
-	{ \
-		swprintf_s(g_astrDebugLog[g_nDebugLogNext], DEBUG_LINE_LEN, __VA_ARGS__); \
-		g_nDebugLogNext = (g_nDebugLogNext + 1) % DEBUG_LOG_LEN; \
-		g_nDebugLogStart = (g_nDebugLogStart + 1) % DEBUG_LOG_LEN; \
-	} while(0)
-#else
-#define WRITE_DEBUG_LOG(...)
-#endif
-
-struct Level
-{
-	const wchar_t strTitle[GAME_AREA_X + 1];
-	const wchar_t strMessage[GAME_AREA_X * 2 + 1];
-	unsigned char ui8BonusStars;
-	unsigned char ui8BonusSquares;
-	unsigned char aui8Board[GAME_AREA_Y][GAME_AREA_X+1];
-};
-
-const Level aui8Levels[] = 
-{
-	{
-		L"T1: In the beginning...",
-		L"When you move all your cells replicate in that direction.\n" \
-		 "Reach the exit portal.",
-		0, 0,
-		{
-			"B         ",
-			"     B    ",
-			"  B       ",
-			"          ",
-			"        B ",
-			"          ",
-			"          ",
-			"          ",
-			"       xxx",
-			"         e",
-			"       xxx",
-		},
-	},
-
-	{
-		L"T2: Yes... Of course it has spikes!",
-		L"But they only kill you if you move into them.\n" \
-		 "You can survive if you reach the portal at the same time.",
-		0, 0,
-		{
-			"!!!!!!!!!!",
-			"B         ",
-			"          ",
-			"          ",
-			"          ",
-			"   xxx    ",
-			"   x!!    ",
-			"          ",
-			"          ",
-			"          ",
-			"!!!!e!!!!!",
-		},
-	},
-	{
-		L"T3: Lone road",
-		L"Sometimes there is only one path.",
-		0, 0,
-		{
-			"Bxxxxxxxxx",
-			" x      xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			"   xxxx  e",
-			"xxxxxxxxxx",
-		},
-	},
-	{
-		L"T4: I'll take the high road, and I'll take the low road",
-		L"Sometimes you'll explore many paths at the same time.\n" \
-		 "  ... There might be bonus goals for covering extra squares.",
-		0, 0,
-		{
-			"Bxxxxxxxxx",
-			" x      xx",
-			" x xxxx xx",
-			" x      xx",
-			" x xxxx xx",
-			" x      xx",
-			" x xxxx xx",
-			" x xxxx xx",
-" x xxxx xx",
-"   xxxx  e",
-"xxxxxxxxxx",
-		},
-	},
-	{
-		//01234567890123456789012345678901234567890123456789012345678|
-		//0         1         2         3         4         5        |
-		L"T5: The obvious path...\n",
-		L"... is not always the right path.\n" \
-		 "Bonus Goal: Cover all the open spaces",
-		0, 40,
-		{
-			"Bxxxxxxxxx",
-			" x      xx",
-			" x xxxx xx",
-			"        xx",
-			" x xxxx xx",
-			" x  !!  xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			" x xxxx xx",
-			"   xxxx  e",
-			"xxxxxxxxxx",
-		},
-	},
-	{
-		L"Section 1: Ready?",
-		L"Now you know what you're doing, it's time to begin!",
-		0, 0,
-		{
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"B        e",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-		},
-	},
-	{
-		L"L1: 'The emergency exits are here, here, here...'",
-		L"Bonus Goal: Collect 5 Stars",
-		5, 0,
-		{
-			"!!!!!!! e!",
-			"!!xxxx! x!",
-			"!!  * * x!",
-			"!!  x!! x!",
-			"!! xxxx  !",
-			"!x B  x  !",
-			"!   x!  !!",
-			"* * xx   !",
-			"e!  *   *!",
-			"!! *  !  !",
-			"!x!! !x!e!",
-		},
-	},
-	{
-		L"L2: 'Left Brain/Right Brain'",
-		L"Bonus Goal: Cover all the open spaces",
-		0, 57,
-		{
-			"xxxxxxxxxx",
-			"    !    e",
-			"  xxx  xxx",
-			"  Bxx     ",
-			" xxxxx xxx",
-			"         e",
-			"      xxxx",
-			"          ",
-			"     xx xx",
-			"xxxx B  xx",
-			"xxxxxxxxxx",
-		},
-	},
-	{
-		L"L3: Slot Machine",
-		L"Bonus Goal: Cover all the open spaces",
-		0, 74,
-		{
-			"exxxxxxxBx",
-			" xx x     ",
-			" !     x  ",
-			" !  x    x",
-			" !    x   ",
-			" ! x    x ",
-			" !    xx  ",
-			" xx x    x",
-			"         x",
-			"    x    x",
-			"      xxxx",
-		},
-	},
-	{
-		L"Section 2: Ooooh, push it, push it real good",
-		L"Yeah, Ok, I'll stop now.",
-		0, 0,
-		{
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"B   M     ",
-			"xxxxxxxxex",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-			"xxxxxxxxxx",
-		},
-	},
-	{
-		L"M1: Like a knife through shark infested custard.",
-		L"or is it a custard infested shark through knives?\n" \
-		L"                    ... I can never remember.",
-		0, 0,
-		{	
-			"B         ",
-			"MMMMMMMMMM",
-			"          ",
-			"  !    !  ",
-			"    !    !",
-			"          ",
-			"      !   ",
-			"          ",
-			" !   !   x",
-			"   !     e",
-			"         x",
-		},
-	},
-	{
-		L"M2: To Me, To You.",
-		L"",
-		0, 0,
-		{	
-			"Bx        ",
-			" x        ",
-			" x        ",
-			" x       B",
-			" x        ",
-			" M        ",
-			" xxxxxxxxx",
-			"          ",
-			" xxxxxxxx ",
-			"!xxxxxxxx ",
-			"xxxxxxxxxe",
-		},
-	},
-	{
-		L"M3: The Medusa Cascade",
-		L"Bonus Goal: Cover all the open spaces",
-		0, 61,
-		{
-			"Bx        ",
-			" MB       ",
-			" xxxxxxxx ",
-			"       M  ",
-			" xxxxxxxx ",
-			"!!xx      ",
-			"!!   xxxx ",
-			"!x x   xx!",
-			"xx x     !",
-			"BM xxxxx !",
-			"BBBxe    !",
-		},
-	},
-	{
-		L"M3: 'But they are the gatekeepers'",
-		L"They are guarding all the doors, they are holding all the\n"\
-		L"keys -- Morpheus.",
-		0, 0,
-		{
-			"xQxxxx  M ",
-			"xQxQx xQx ",
-			"x x x x x ",
-			"xQx xQxQxB",
-			"xQxQxQx xx",
-			"B  Q Q Q e",
-			"xQxQx x xx",
-			"x xQx x xx",
-			"x x x x xx",
-			"x x xxxxxx",
-			"xxx xxxxxx",
-		},
-	},
-};
-const int numLevels = sizeof(aui8Levels) / sizeof(aui8Levels[0]);
-
-struct Pos
-{
-	int x;
-	int y;
-};
-
-enum Direction
-{
-	None = 0,
-	Up,
-	Down,
-	Left,
-	Right,
-};
-
-const wchar_t* g_asDirectionStrings[] =
-{
-	L"None",
-	L"Up",
-	L"Down",
-	L"Left",
-	L"Right",
-};
-
-enum GameCell
-{
-	SPACE,
-	WALL,
-	BLOB,
-	SPIKES,
-	EXIT,
-	STAR,
-	MOVEABLE,
-	QUANTUM,
-};
-
-struct EdgeChar
-{
-	wchar_t norm;
-	wchar_t term;
-};
-
-struct CornerChar
-{
-	wchar_t norm;
-	wchar_t term;
-	wchar_t midH;
-	wchar_t midV;
-};
-
-struct GridSpriteData
-{
-	EdgeChar t;
-	EdgeChar b;
-	EdgeChar l;
-	EdgeChar r;
-
-	CornerChar tl;
-	CornerChar tr;
-	CornerChar bl;
-	CornerChar br;
-
-	wchar_t fill;
-};
-
-/* Draws grid cells using the ANSI single line drawing characters */
-static const GridSpriteData g_sSingleLineBox = {
-	{ 0x2500, 0x2500 },
-	{ 0x2500, 0x2500 },
-	{ 0x2502, 0x2502 },
-	{ 0x2502, 0x2502 },
-	{ 0x253C, 0x250C, 0x252C, 0x251C },
-	{ 0x253C, 0x2510, 0x252C, 0x2524 },
-	{ 0x253C, 0x2514, 0x2534, 0x251C },
-	{ 0x253C, 0x2518, 0x2534, 0x2524 },
-	L' ',
-};
-
-/* Draws grid cells using the ANSI single line drawing characters */
-static const GridSpriteData g_sSnake = {
-	{ 0x256C, 0x256C },
-	{ 0x256C, 0x256C },
-	{ 0x256C, 0x256C },
-	{ 0x256C, 0x256C },
-	{ 0x256C, 0x256C, 0x256C, 0x256C },
-	{ 0x256C, 0x256C, 0x256C, 0x256C },
-	{ 0x256C, 0x256C, 0x256C, 0x256C },
-	{ 0x256C, 0x256C, 0x256C, 0x256C },
-	L' ',
-};
 
 class GridSpriteRenderer
 {
@@ -980,7 +562,7 @@ public:
 	static void WriteCounter(ConsoleWriter& sConsole, const int& nCount, const int& nMax, const int& x, const int& y)
 	{
 		wchar_t strCounter[25];
-		wsprintf(strCounter, L"%03d / %03d", nCount, nMax);
+		swprintf(strCounter, 25, L"%03d / %03d", nCount, nMax);
 		
 		sConsole.Print(x, y, strCounter);
 	}
@@ -1101,7 +683,7 @@ public:
 						sConsole.Background(BLACK, false);
 
 						/* Gradient pattern, 3 repeats */
-						wchar_t *strGradient = L"\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591";
+						const wchar_t *strGradient = L"\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591";
 
 						/* Animation test */
 						int nOffset = 5;// + (nFrame % 5);
@@ -1168,10 +750,13 @@ public:
 
 int main(int argc, char** argv)
 {
+#if defined(WIN32)
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+#endif
 
 	ConsoleWriter sConsole(GAME_AREA_X + SIDE_AREA_X + DEBUG_AREA_X,
 						   GAME_AREA_Y + SIDE_AREA_Y);
+
 	GameBoard sGame(GAME_SIZE_X, GAME_SIZE_Y);
 
 	{
@@ -1247,10 +832,41 @@ int main(int argc, char** argv)
 	//system("pause");
 
 	sConsole.Swap();
-	
+
 	bool bRunning = true;
 	while (bRunning)
 	{
+#if !defined(WIN32)
+
+		char ch = getchar();
+		sGame.KeyPress(ch);
+		if (ch == 0x1B)
+		{
+			bRunning = false;
+			continue;
+		}
+
+		sGame.Draw(sConsole);
+
+	#if defined(DEBUG)
+		sConsole.Foreground(WHITE, false);
+
+		// Border around the debug area
+		GridSpriteRenderer::Render(GAME_AREA_X + SIDE_AREA_X, 0,
+				DEBUG_AREA_X - 1, GAME_AREA_Y + SIDE_AREA_Y - 1,
+					true, true, true, true,
+					g_sSingleLineBox, sConsole);
+
+		// Dump the log buffer
+		int entry = g_nDebugLogStart;
+		for (auto i = 0; i < DEBUG_LOG_LEN; i++)
+		{
+			sConsole.Print(GAME_AREA_X + SIDE_AREA_X + 1, 1 + i, g_astrDebugLog[entry]);
+			entry = (entry + 1) % DEBUG_LOG_LEN;
+		}
+	#endif
+#else
+
 		/* Wait is the game time step in ms - or INFINITE for no display update tick */
 		DWORD nWaitStatus = WaitForSingleObject(hIn, INFINITE);	
 
@@ -1321,7 +937,7 @@ int main(int argc, char** argv)
 				bRunning = false;
 				continue;
 		}
-
+#endif
     }
 
 	wchar_t chars[] = { 0x2588, 0x2593, 0x2592, 0x2591, 0};

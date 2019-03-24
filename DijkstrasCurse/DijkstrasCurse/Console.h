@@ -1,15 +1,27 @@
 #pragma once
 
+#include <stdint.h>
+#include <memory>
+
+#if defined(WIN32)
+
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
-#include <memory>
 #include <Windows.h>
 #include <WinCon.h>
 #include <io.h>
 #include <fcntl.h>
 
+#else
+
+#define E4B_WIDE_CHARS
+#include "e4b.h" // My 4bit console escape code wrapper
+
+#endif
+
 enum ConsoleColour
 {
+#if defined(WIN32)
 	BLACK	= 0,
 	RED		= FOREGROUND_RED,
 	GREEN   = FOREGROUND_GREEN,
@@ -18,12 +30,22 @@ enum ConsoleColour
 	YELLOW  = RED | GREEN,
 	MAGENTA = RED | BLUE,
 	WHITE   = RED | GREEN | BLUE,
+#else
+	BLACK   = E4B_BLACK,
+	RED     = E4B_RED,
+	GREEN   = E4B_GREEN,
+	YELLOW  = E4B_YELLOW,
+	BLUE    = E4B_BLUE,
+	MAGENTA = E4B_MAGENTA,
+	CYAN    = E4B_CYAN,
+	WHITE   = E4B_WHITE,
+#endif
 };
 
 class ConsoleWriter
 {
 public:
-	ConsoleWriter(SHORT width=64, SHORT height=45);
+	ConsoleWriter(uint16_t width=64, uint16_t height=45);
 	~ConsoleWriter();
 
 public:
@@ -40,10 +62,14 @@ protected:
 	bool CreateScreenBuffer();
 
 protected:
+#if defined(WIN32)
 	HANDLE hConsoleOut;
 	WORD colourCode;
 
 	COORD sBufferSize;
 	HANDLE hScreenBuffer;
 	std::unique_ptr<CHAR_INFO[]> asConsoleBuffer;
+#else
+	E4BColourPair currentColour;
+#endif
 };
