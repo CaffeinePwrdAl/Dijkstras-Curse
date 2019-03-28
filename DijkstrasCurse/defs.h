@@ -43,9 +43,9 @@ const int SIDE_AREA_Y = 5;
 	const int DEBUG_AREA_X = DEBUG_LINE_LEN + 2;
 
 	const int DEBUG_LOG_LEN = GAME_AREA_Y + SIDE_AREA_Y - 2;
-	wchar_t g_astrDebugLog[DEBUG_LOG_LEN][DEBUG_LINE_LEN + 1];
-	int g_nDebugLogNext = 0;
-	int g_nDebugLogStart = DEBUG_LOG_LEN;
+	extern wchar_t g_astrDebugLog[DEBUG_LOG_LEN][DEBUG_LINE_LEN + 1];
+	extern int g_nDebugLogNext;
+	extern int g_nDebugLogStart;
 
 	#define WRITE_DEBUG_LOG(...) \
 		do \

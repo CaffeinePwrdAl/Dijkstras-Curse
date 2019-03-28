@@ -21,9 +21,18 @@
     <ClCompile Include="Console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="levels.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="levels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

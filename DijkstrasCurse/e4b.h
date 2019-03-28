@@ -8,10 +8,12 @@
 	typedef wchar_t E4BChar;
 	#define e4bprintf wprintf
 	#define E4BW(x) CONCAT(L, x)
+	#define PRI_WCHAR "%s"
 #else
 	typedef char E4BChar;
 	#define e4bprintf printf
 	#define E4BW(x) x
+	#define PRI_WCHAR "%S"
 #endif
 
 
@@ -164,7 +166,7 @@ static void Test4BitCodes()
 		for (const auto &cp : colours)
 		{
 			E4BSetColour(cp);
-			e4bprintf(E4BW("%S"), L" \x2591\x2592\x2593\x2588");
+			e4bprintf(E4BW(PRI_WCHAR), L" \x2591\x2592\x2593\x2588");
 			e4bprintf(E4B_RESETALL());
 			e4bprintf(E4BW(" "));
 		}

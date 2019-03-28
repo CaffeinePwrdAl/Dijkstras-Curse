@@ -1,7 +1,7 @@
 #include "Console.h"
 
-ConsoleWriter::ConsoleWriter(SHORT width, SHORT height)
-		:sBufferSize {width, height}
+ConsoleWriter::ConsoleWriter(int width, int height)
+		:sBufferSize {(SHORT)width, (SHORT)height}
 {
 	hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
 

@@ -21,6 +21,8 @@ wchar_t asLogo[][GAME_AREA_X+1] =
 	L"",
 	L"         Copyright (c)  Caffine Powered Games - 2015         ",
 };
+const int NUM_LOGO_ROWS = sizeof(asLogo) / sizeof(asLogo[0]);
+
 
 const Level aui8Levels[] = 
 {
@@ -103,10 +105,10 @@ const Level aui8Levels[] =
 	{
 		//01234567890123456789012345678901234567890123456789012345678|
 		//0         1         2         3         4         5        |
-		L"T5: The obvious path...\n",
+		L"T5: The obvious path...",
 		L"... is not always the right path.\n" \
 		 "Bonus Goal: Cover all the open spaces",
-		0, 40,
+		0, 41,
 		{
 			"Bxxxxxxxxx",
 			" x      xx",

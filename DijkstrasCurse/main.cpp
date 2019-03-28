@@ -11,7 +11,13 @@
 #include "levels.h"
 
 #if !defined(swprintf)
-#define swprintf(a,b,c,...) wprintf(a,c,__VA_ARGS__)
+#define swprintf(str,len,fmt,...) wsprintf(str,fmt,__VA_ARGS__)
+#endif
+
+#if defined (_DEBUG)
+wchar_t g_astrDebugLog[DEBUG_LOG_LEN][DEBUG_LINE_LEN + 1];
+int g_nDebugLogNext = 0;
+int g_nDebugLogStart = DEBUG_LOG_LEN;
 #endif
 
 class GridSpriteRenderer
@@ -648,15 +654,16 @@ public:
 					if (eCell == SPIKES)
 					{	
 						sConsole.Background(BLACK, false);
-						sConsole.Foreground(WHITE, true);
+						sConsole.Foreground(BLACK, true);
 						sConsole.Print(xpos + 1, ypos + 1, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
 						sConsole.Print(xpos + 1, ypos + 2, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
 						sConsole.Print(xpos + 1, ypos + 3, L"\u25B2\u25B2\u25B2\u25B2\u25B2");
 
+
 						sConsole.Foreground(WHITE, false);
-						sConsole.Print(xpos + 2, ypos + 2, L"\u25B2");
-						sConsole.Print(xpos + 4, ypos + 3, L"\u25B2");
-						sConsole.Print(xpos + 5, ypos + 1, L"\u25B2");
+						if (rand() % 20 == 0) sConsole.Print(xpos + 1 + (rand() % 4), ypos + 2, L"\u25B2");
+						if (rand() % 20 == 0) sConsole.Print(xpos + 1 + (rand() % 4), ypos + 3, L"\u25B2");
+						if (rand() % 20 == 0) sConsole.Print(xpos + 1 + (rand() % 4), ypos + 1, L"\u25B2");
 					}
 					else if (eCell == EXIT)
 					{
@@ -670,23 +677,26 @@ public:
 					}
 					else if (eCell == STAR)
 					{
-						sConsole.Foreground(YELLOW, false);
+						sConsole.Foreground(YELLOW, true);
 						sConsole.Background(BLACK, false);
 						
-						sConsole.Print(xpos + 2, ypos + 1, L".|,"); 
-						sConsole.Print(xpos + 1, ypos + 2, L"-=O=-"); 
-						sConsole.Print(xpos + 2, ypos + 3, L"'|`"); 
+						//sConsole.Print(xpos + 2, ypos + 1,  L"\u2518\u2502\u2514"); 
+						//sConsole.Print(xpos + 1, ypos + 2, L"-\u2550\u25A0\u2550-"); 
+						//sConsole.Print(xpos + 2, ypos + 3,  L"\u2510\u2502\u250C"); 
+						sConsole.Print(xpos + 2, ypos + 1, L"\u2219\u25B2\u2219");
+						sConsole.Print(xpos + 1, ypos + 2, L"\u25C4 \u25A0 \u25BA");
+						sConsole.Print(xpos + 2, ypos + 3, L"\u2219\u25BC\u2219");
 					}
 					else if (eCell == MOVEABLE || eCell == QUANTUM)
 					{
-						sConsole.Foreground((eCell == MOVEABLE)?(WHITE):(BLUE), true);
+						sConsole.Foreground((eCell == MOVEABLE)?(CYAN):(BLUE), true);
 						sConsole.Background(BLACK, false);
 
 						/* Gradient pattern, 3 repeats */
 						const wchar_t *strGradient = L"\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591\u2592\u2593\u2592\u2591\u2591";
 
 						/* Animation test */
-						int nOffset = 5;// + (nFrame % 5);
+						int nOffset = 5 + (nFrame % 5);
 
 						sConsole.Printn(xpos + 1, ypos + 1, strGradient + nOffset, 5);
 						sConsole.Printn(xpos + 1, ypos + 2, strGradient + nOffset - 1, 5);
@@ -748,6 +758,53 @@ public:
 	}
 };
 
+bool WaitForKeypress(
+#if defined(_WIN32)
+	HANDLE hIn,
+#endif
+	wchar_t &ch)
+{
+	/* Wait is the game time step in ms - or INFINITE for no display update tick */
+	DWORD nWaitStatus = WaitForSingleObject(hIn, 200);
+
+	switch (nWaitStatus)
+	{
+		case WAIT_OBJECT_0:
+		{
+			INPUT_RECORD InRec;
+			DWORD numRead;
+			if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
+			{
+				return false;
+			}
+
+			if ((InRec.EventType == KEY_EVENT) &&
+				InRec.Event.KeyEvent.bKeyDown)
+			{
+				ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
+				return true;
+			}
+		}
+		break;
+
+		case WAIT_TIMEOUT:
+		{
+			// Normal
+		}
+		break;
+
+		default:
+		case WAIT_FAILED:
+		case WAIT_ABANDONED:
+		{
+			printf("Something went wrong: WaitForSingleObject -> 0x%x\n", nWaitStatus);
+		}
+		break;
+	}
+
+	return false;
+}
+
 int main(int argc, char** argv)
 {
 #if defined(WIN32)
@@ -791,52 +848,36 @@ int main(int argc, char** argv)
 		sConsole.Foreground(MAGENTA, true);
 		sConsole.Background(BLACK, false);
 
-		wchar_t asLogo[][GAME_AREA_X+1] = 
-		{
-			//0123456789012345678901234567890123456789012345678901234567890
-			//0         1         2         3         4         5         6
-			L"                      Dijkstras Curse                        ",
-			L"                                                             ",
-			L"                             .;:;.                           ",
-			L"                       .   .;:##:;.                          ",
-			L"                      .;. .;:####:;.                         ",
-			L"                    .;:#:;.;:###::;.                         ",
-			L"                      .;. .;:##:;.                           ",
-			L"                       .   .;::;.                            ",
-			L"                            .;;.                             ",
-			L"",
-			L"          A game by Alex Walters {@CaffeinePwrdAl}           ",
-			L"",
-			L"         Copyright (c)  Caffine Powered Games - 2015         ",
-		};
-
-		for (int i = 0; i < sizeof(asLogo)/sizeof(asLogo[0]); i++)
+		for (int i = 0; i < NUM_LOGO_ROWS; i++)
 		{
 			for (int j = 0; j < GAME_AREA_X; j++)
 			{
 				switch (asLogo[i][j])
-				{
-				case L'.': asLogo[i][j] = L'\u2591'; break;
-				case L';': asLogo[i][j] = L'\u2592'; break;
-				case L':': asLogo[i][j] = L'\u2593'; break;
-				case L'#': asLogo[i][j] = L'\u2588'; break;
+				{	
+					case L'.': asLogo[i][j] = L'\u2591'; break;
+					case L';': asLogo[i][j] = L'\u2592'; break;
+					case L':': asLogo[i][j] = L'\u2593'; break;
+					case L'#': asLogo[i][j] = L'\u2588'; break;
 				}
 			}
 			sConsole.Print(0, 4 + i, asLogo[i]);
 		}
 	}
 
+	// Swap and wait for keypress to skip logo...
 	sConsole.Swap();
+	{
+		wchar_t ch;
+		while (!WaitForKeypress(hIn, ch)) { }
+	}
 
 	sGame.Draw(sConsole);
-	//system("pause");
-
 	sConsole.Swap();
 
 	bool bRunning = true;
 	while (bRunning)
 	{
-#if !defined(WIN32)
+#if !defined(_WIN32)
 
 		char ch = getchar();
 		sGame.KeyPress(ch);
@@ -866,79 +907,45 @@ int main(int argc, char** argv)
 		}
 	#endif
 #else
-
-		/* Wait is the game time step in ms - or INFINITE for no display update tick */
-		DWORD nWaitStatus = WaitForSingleObject(hIn, INFINITE);	
-
-		switch (nWaitStatus)
+		wchar_t ch;
+		if (WaitForKeypress(hIn, ch))
 		{
-			case WAIT_OBJECT_0:
+			sGame.KeyPress(ch);
+			if (ch == 0x1B || ch == L'q')
 			{
-				INPUT_RECORD InRec;
-				DWORD numRead;
-				if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
-				{
-					bRunning = false;
-					continue;
-				}
-				
-				if ((InRec.EventType == KEY_EVENT) &&
-					InRec.Event.KeyEvent.bKeyDown)
-				{
-					wchar_t ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
-
-					/*wchar_t astr[] = L"XX";
-					wsprintf(astr, L"%02X", ch);
-					sConsole.Foreground(WHITE, false);
-					sConsole.Print(62, 38, astr);*/
-
-					sGame.KeyPress(ch);
-
-					if (ch == 0x1B)
-					{
-						bRunning = false;
-						continue;
-					}
-				}
-			}
-			/* Fall through */
-
-			case WAIT_TIMEOUT:
-			{
-				sGame.Draw(sConsole);
-
-#if defined (_DEBUG)
-				{
-					sConsole.Foreground(WHITE, false);
-
-					// Border around the debug area
-					GridSpriteRenderer::Render(GAME_AREA_X + SIDE_AREA_X, 0,
-						DEBUG_AREA_X - 1, GAME_AREA_Y + SIDE_AREA_Y - 1,
-						true, true, true, true,
-						g_sSingleLineBox, sConsole);
-
-					// Dump the log buffer
-					int entry = g_nDebugLogStart;
-					for (auto i = 0; i < DEBUG_LOG_LEN; i++)
-					{
-						sConsole.Print(GAME_AREA_X + SIDE_AREA_X + 1, 1 + i, g_astrDebugLog[entry]);
-						entry = (entry + 1) % DEBUG_LOG_LEN;
-					}
-				}
-#endif
-				sConsole.Swap();
-			}
-			break;
-
-			default:
-			case WAIT_ABANDONED:
-			case WAIT_FAILED:
-				printf("Something went wrong: WaitForSingleObject -> 0x%x\n", nWaitStatus);
 				bRunning = false;
 				continue;
+			}
+		}
+		
+		// Always Refresh each loop, even if there was no input...
+		{
+			sGame.Draw(sConsole);
+
+			#if defined (_DEBUG)
+			{
+				sConsole.Foreground(WHITE, false);
+
+				// Border around the debug area
+				GridSpriteRenderer::Render(GAME_AREA_X + SIDE_AREA_X, 0,
+					DEBUG_AREA_X - 1, GAME_AREA_Y + SIDE_AREA_Y - 1,
+					true, true, true, true,
+					g_sSingleLineBox, sConsole);
+
+				// Dump the log buffer
+				int entry = g_nDebugLogStart;
+				for (auto i = 0; i < DEBUG_LOG_LEN; i++)
+				{
+					sConsole.Print(GAME_AREA_X + SIDE_AREA_X + 1, 1 + i, g_astrDebugLog[entry]);
+					entry = (entry + 1) % DEBUG_LOG_LEN;
+				}
+			}
+			#endif
+
+			sConsole.Swap();
 		}
 #endif
-    }
+	}
 
 	wchar_t chars[] = { 0x2588, 0x2593, 0x2592, 0x2591, 0};
 	sConsole.Foreground(MAGENTA, true);

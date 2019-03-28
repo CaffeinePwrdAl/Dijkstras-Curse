@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <memory>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
@@ -45,7 +45,7 @@ enum ConsoleColour
 class ConsoleWriter
 {
 public:
-	ConsoleWriter(uint16_t width=64, uint16_t height=45);
+	ConsoleWriter(int width=64, int height=45);
 	~ConsoleWriter();
 
 public:
