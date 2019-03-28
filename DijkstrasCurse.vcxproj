@@ -151,14 +151,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Console.cpp" />
-    <ClCompile Include="levels.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="src/console.cpp" />
+    <ClCompile Include="src/levels.cpp" />
+    <ClCompile Include="src/main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Console.h" />
-    <ClInclude Include="defs.h" />
-    <ClInclude Include="levels.h" />
+    <ClInclude Include="src/console.h" />
+    <ClInclude Include="src/defs.h" />
+    <ClInclude Include="src/levels.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

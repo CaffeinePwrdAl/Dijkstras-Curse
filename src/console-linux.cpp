@@ -1,6 +1,8 @@
-#include "Console.h"
+#include <unistd.h>
+#include <termios.h>
+#include "console.h"
 
-ConsoleWriter::ConsoleWriter(uint16_t width, uint16_t height)
+ConsoleWriter::ConsoleWriter(int width, int height)
 //		:sBufferSize {width, height}
 {
 	setlocale(LC_CTYPE,"");
@@ -132,3 +134,50 @@ void ConsoleWriter::Swap()
 {
 }
 
+ConsoleReader::ConsoleReader()
+{
+	SetTTY();
+}
+
+ConsoleReader::~ConsoleReader()
+{
+	RestoreTTY();
+}
+
+bool ConsoleReader::WaitForKeypress(wchar_t& ch)
+{
+	ch = getchar();
+
+	return true;
+}
+
+
+static bool g_bInitialised = false;
+static struct termios g_sOldTTY, g_sNewTTY;
+
+void ConsoleReader::SetTTY()
+{
+	if (!g_bInitialised)
+	{
+		tcgetattr(STDIN_FILENO, &g_sOldTTY);
+
+		g_sNewTTY = g_sOldTTY;
+
+		// Don't wait for enter on keypress, and don't echo them
+		// to the terminal.
+		g_sNewTTY.c_lflag &= ~(ICANON | ECHO);
+
+		tcsetattr(STDIN_FILENO, TCSANOW, &g_sNewTTY);
+
+		g_bInitialised = true;
+	}
+}
+
+void ConsoleReader::RestoreTTY()
+{
+	if (g_bInitialised)
+	{
+		tcsetattr(STDIN_FILENO, TCSANOW, &g_sOldTTY);
+		g_bInitialised = false;
+	}
+}

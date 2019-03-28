@@ -1,7 +1,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "Console.h"
+#include "console.h"
 #include <vector>
 
 /* Size of Game Board */

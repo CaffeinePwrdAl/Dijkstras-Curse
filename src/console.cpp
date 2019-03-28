@@ -1,4 +1,4 @@
-#include "Console.h"
+#include "console.h"
 
 ConsoleWriter::ConsoleWriter(int width, int height)
 		:sBufferSize {(SHORT)width, (SHORT)height}
@@ -60,9 +60,9 @@ bool ConsoleWriter::CreateScreenBuffer()
 	CONSOLE_FONT_INFOEX sCFIX = { 0 };
 	sCFIX.cbSize = sizeof(CONSOLE_FONT_INFOEX);
 	sCFIX.FontWeight = 400;
-	sCFIX.dwFontSize.X = 8;
+	sCFIX.dwFontSize.X = 10;
 	sCFIX.dwFontSize.Y = 16;
-	wcscpy_s(sCFIX.FaceName, L"Courier New");
+	wcscpy_s(sCFIX.FaceName, L"Lucida Console");
 	SetCurrentConsoleFontEx(hScreenBuffer, FALSE, &sCFIX);
 
 	// Determine the minimum window size. We have to make sure the window is smaller
@@ -254,4 +254,55 @@ void ConsoleWriter::Swap()
 
 	COORD sBufferCoord = {0, 0};
 	WriteConsoleOutputW(hScreenBuffer, asConsoleBuffer.get(), sBufferSize, sBufferCoord, &sWriteRegion);
+}
+
+ConsoleReader::ConsoleReader()
+{
+	hIn = GetStdHandle(STD_INPUT_HANDLE);
+}
+
+ConsoleReader::~ConsoleReader()
+{}
+
+bool ConsoleReader::WaitForKeypress(wchar_t& ch)
+{
+	/* Wait is the game time step in ms - or INFINITE for no display update tick */
+	DWORD nWaitStatus = WaitForSingleObject(hIn, 200);
+
+	switch (nWaitStatus)
+	{
+	case WAIT_OBJECT_0:
+	{
+		INPUT_RECORD InRec;
+		DWORD numRead;
+		if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
+		{
+			return false;
+		}
+
+		if ((InRec.EventType == KEY_EVENT) &&
+			InRec.Event.KeyEvent.bKeyDown)
+		{
+			ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
+			return true;
+		}
+	}
+	break;
+
+	case WAIT_TIMEOUT:
+	{
+		// Normal
+	}
+	break;
+
+	default:
+	case WAIT_FAILED:
+	case WAIT_ABANDONED:
+	{
+		printf("Something went wrong: WaitForSingleObject -> 0x%x\n", nWaitStatus);
+	}
+	break;
+	}
+
+	return false;
 }

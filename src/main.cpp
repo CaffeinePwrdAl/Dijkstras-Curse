@@ -3,14 +3,15 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <string>
-#include "Console.h"
+#include "console.h"
 #include <vector>
 #include <memory>
+#include <cwchar>
 
 #include "defs.h"
 #include "levels.h"
 
-#if !defined(swprintf)
+#if !defined(swprintf) && defined(wsprintf)
 #define swprintf(str,len,fmt,...) wsprintf(str,fmt,__VA_ARGS__)
 #endif
 
@@ -680,12 +681,15 @@ public:
 						sConsole.Foreground(YELLOW, true);
 						sConsole.Background(BLACK, false);
 						
+						sConsole.Print(xpos + 3, ypos + 1, L"\u2502");
+						sConsole.Print(xpos + 1, ypos + 2, L"-\u2550\u25A0\u2550-");
+						sConsole.Print(xpos + 3, ypos + 3, L"\u2502");
 						//sConsole.Print(xpos + 2, ypos + 1,  L"\u2518\u2502\u2514"); 
 						//sConsole.Print(xpos + 1, ypos + 2, L"-\u2550\u25A0\u2550-"); 
-						//sConsole.Print(xpos + 2, ypos + 3,  L"\u2510\u2502\u250C"); 
-						sConsole.Print(xpos + 2, ypos + 1, L"\u2219\u25B2\u2219");
-						sConsole.Print(xpos + 1, ypos + 2, L"\u25C4 \u25A0 \u25BA");
-						sConsole.Print(xpos + 2, ypos + 3, L"\u2219\u25BC\u2219");
+						//sConsole.Print(xpos + 2, ypos + 3,  L"\u2510\u2502\u250C");
+						//sConsole.Print(xpos + 2, ypos + 1, L"\u2219\u25B2\u2219");
+						//sConsole.Print(xpos + 1, ypos + 2, L"\u25C4 \u25A0 \u25BA");
+						//sConsole.Print(xpos + 2, ypos + 3, L"\u2219\u25BC\u2219");
 					}
 					else if (eCell == MOVEABLE || eCell == QUANTUM)
 					{
@@ -758,59 +762,9 @@ public:
 	}
 };
 
-bool WaitForKeypress(
-#if defined(_WIN32)
-	HANDLE hIn,
-#endif
-	wchar_t &ch)
-{
-	/* Wait is the game time step in ms - or INFINITE for no display update tick */
-	DWORD nWaitStatus = WaitForSingleObject(hIn, 200);
-
-	switch (nWaitStatus)
-	{
-		case WAIT_OBJECT_0:
-		{
-			INPUT_RECORD InRec;
-			DWORD numRead;
-			if (!ReadConsoleInput(hIn, &InRec, 1, &numRead))
-			{
-				return false;
-			}
-
-			if ((InRec.EventType == KEY_EVENT) &&
-				InRec.Event.KeyEvent.bKeyDown)
-			{
-				ch = InRec.Event.KeyEvent.uChar.UnicodeChar;
-				return true;
-			}
-		}
-		break;
-
-		case WAIT_TIMEOUT:
-		{
-			// Normal
-		}
-		break;
-
-		default:
-		case WAIT_FAILED:
-		case WAIT_ABANDONED:
-		{
-			printf("Something went wrong: WaitForSingleObject -> 0x%x\n", nWaitStatus);
-		}
-		break;
-	}
-
-	return false;
-}
-
 int main(int argc, char** argv)
 {
-#if defined(WIN32)
-	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-#endif
-
+	ConsoleReader sInput;
 	ConsoleWriter sConsole(GAME_AREA_X + SIDE_AREA_X + DEBUG_AREA_X,
 						   GAME_AREA_Y + SIDE_AREA_Y);
 
@@ -868,7 +822,7 @@ int main(int argc, char** argv)
 	sConsole.Swap();
 	{
 		wchar_t ch;
-		while (!WaitForKeypress(hIn, ch)) { }
+		while (!sInput.WaitForKeypress(ch)) { }
 	}
 
 	sGame.Draw(sConsole);
@@ -877,38 +831,8 @@ int main(int argc, char** argv)
 	bool bRunning = true;
 	while (bRunning)
 	{
-#if !defined(_WIN32)
-
-		char ch = getchar();
-		sGame.KeyPress(ch);
-		if (ch == 0x1B)
-		{
-			bRunning = false;
-			continue;
-		}
-
-		sGame.Draw(sConsole);
-
-	#if defined(DEBUG)
-		sConsole.Foreground(WHITE, false);
-
-		// Border around the debug area
-		GridSpriteRenderer::Render(GAME_AREA_X + SIDE_AREA_X, 0,
-				DEBUG_AREA_X - 1, GAME_AREA_Y + SIDE_AREA_Y - 1,
-					true, true, true, true,
-					g_sSingleLineBox, sConsole);
-
-		// Dump the log buffer
-		int entry = g_nDebugLogStart;
-		for (auto i = 0; i < DEBUG_LOG_LEN; i++)
-		{
-			sConsole.Print(GAME_AREA_X + SIDE_AREA_X + 1, 1 + i, g_astrDebugLog[entry]);
-			entry = (entry + 1) % DEBUG_LOG_LEN;
-		}
-	#endif
-#else
 		wchar_t ch;
-		if (WaitForKeypress(hIn, ch))
+		if (sInput.WaitForKeypress(ch))
 		{
 			sGame.KeyPress(ch);
 			if (ch == 0x1B || ch == L'q')
@@ -944,7 +868,6 @@ int main(int argc, char** argv)
 
 			sConsole.Swap();
 		}
-#endif
 	}
 
 	wchar_t chars[] = { 0x2588, 0x2593, 0x2592, 0x2591, 0};

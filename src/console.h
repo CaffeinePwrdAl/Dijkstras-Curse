@@ -62,7 +62,7 @@ protected:
 	bool CreateScreenBuffer();
 
 protected:
-#if defined(WIN32)
+#if defined(_WIN32)
 	HANDLE hConsoleOut;
 	WORD colourCode;
 
@@ -71,5 +71,23 @@ protected:
 	std::unique_ptr<CHAR_INFO[]> asConsoleBuffer;
 #else
 	E4BColourPair currentColour;
+#endif
+};
+
+class ConsoleReader
+{
+public:
+	ConsoleReader();
+	~ConsoleReader();
+
+public:
+	bool WaitForKeypress(wchar_t &ch);
+
+protected:
+#if defined(_WIN32)
+	HANDLE hIn;
+#else
+	void SetTTY();
+	void RestoreTTY();
 #endif
 };

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Express 14 for Windows Desktop
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DijkstrasCurse", "DijkstrasCurse\DijkstrasCurse.vcxproj", "{D8994341-BAB7-420F-B066-966D56ABD6C8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DijkstrasCurse", "DijkstrasCurse.vcxproj", "{D8994341-BAB7-420F-B066-966D56ABD6C8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,8 +30,8 @@ Global
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://caffeinepwrdal.visualstudio.com/defaultcollection
 		SccLocalPath0 = .
-		SccProjectUniqueName1 = DijkstrasCurse\\DijkstrasCurse.vcxproj
+		SccProjectUniqueName1 = DijkstrasCurse.vcxproj
 		SccProjectName1 = DijkstrasCurse
-		SccLocalPath1 = DijkstrasCurse
+		SccLocalPath1 = .
 	EndGlobalSection
 EndGlobal
