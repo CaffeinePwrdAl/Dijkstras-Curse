@@ -19,6 +19,7 @@
 
 #endif
 
+// Not handling transparent character background?
 enum ConsoleColour
 {
 #if defined(WIN32)
@@ -59,7 +60,10 @@ public:
 	void Swap();
 
 protected:
+	void SetCurrentColour();
+#if defined(_WIN32)
 	bool CreateScreenBuffer();
+#endif
 
 protected:
 #if defined(_WIN32)
@@ -70,7 +74,9 @@ protected:
 	HANDLE hScreenBuffer;
 	std::unique_ptr<CHAR_INFO[]> asConsoleBuffer;
 #else
-	E4BColourPair currentColour;
+	bool bUse8BitColours;
+	E4BColourPair e4bColour;
+	E8BColourPair e8bColour;
 #endif
 };
 

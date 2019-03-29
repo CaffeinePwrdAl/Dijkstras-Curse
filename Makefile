@@ -1,6 +1,6 @@
 
 CXX=g++
-CPPFLAGS=-g -std=c++14
+CPPFLAGS=-g -std=c++14 -Wall -Wpedantic -Wextra
 LDFLAGS=-g
 LDLIBS=-lm
 
@@ -23,4 +23,4 @@ main.o: main.cpp defs.h console.h e4b.h
 levels.o: levels.cpp defs.h
 
 clean:
-	rm *.o
+	rm $(SRC_ROOT)/*.o

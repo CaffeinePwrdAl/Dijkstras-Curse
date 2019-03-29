@@ -2,50 +2,100 @@
 #include <termios.h>
 #include "console.h"
 
+static const E8BColour g_asE8BDim[] =
+{
+	{0.0f, 0.0f, 0.0f}, /* E4B_BLACK    */
+	{0.6f, 0.0f, 0.0f}, /* E4B_RED      */
+	{0.0f, 0.4f, 0.0f}, /* E4B_GREEN    */
+	{0.6f, 0.4f, 0.0f}, /* E4B_YELLOW   */
+	{0.0f, 0.0f, 0.7f}, /* E4B_BLUE     */
+	{0.6f, 0.0f, 0.7f}, /* E4B_MAGENTA  */
+	{0.0f, 0.4f, 0.7f}, /* E4B_CYAN     */
+	{0.6f, 0.4f, 0.7f}, /* E4B_WHITE    */ 
+};
+static const E8BColour g_asE8BBright[] =
+{
+	{0.2f, 0.2f, 0.2f}, /* E4B_BLACK    */
+	{1.0f, 0.0f, 0.0f}, /* E4B_RED      */
+	{0.0f, 1.0f, 0.0f}, /* E4B_GREEN    */
+	{1.0f, 1.0f, 0.0f}, /* E4B_YELLOW   */
+	{0.0f, 0.0f, 1.0f}, /* E4B_BLUE     */
+	{1.0f, 0.0f, 1.0f}, /* E4B_MAGENTA  */
+	{0.0f, 1.0f, 1.0f}, /* E4B_CYAN     */
+	{1.0f, 1.0f, 1.0f}, /* E4B_WHITE    */ 
+};
+
 ConsoleWriter::ConsoleWriter(int width, int height)
-//		:sBufferSize {width, height}
+	: bUse8BitColours(true)
 {
 	setlocale(LC_CTYPE,"");
-	wprintf(E4B_CLS());
-	Test4BitCodes();
+//	wprintf(E4B_CLS());
+//	Test4BitCodes();
+//	Test8BitCodes();
+
+	Foreground(RED, true);
+	Background(BLACK, false);
+	SetCurrentColour();
+	wprintf(L"###\n");
+
+	Foreground(RED, false);
+	Background(CYAN, true);
+	SetCurrentColour();
+	wprintf(L"###\n");
 
 	Foreground(WHITE, true);
 	Background(BLACK, false);
-	E4BSetColour(currentColour);
-	wprintf(L"Hello!\n");
+	SetCurrentColour();
+	wprintf(L"###\n");
+	wprintf(L"\n");
 
-	wprintf(E4B_CLS());
+	exit(42);
 
-	Rect(0, 0, 50, 50, L'*');
-
-	Print(2, 2, L"A Normal Print");
-	Printn(2, 4, L"A Normal Print", 8);
-	MLPrint(2, 6, L"Hello there traveller...\n  Stay awhile and listen\n\nYou Died.");
-
-	wprintf(E4B_RESET());
-
-//	exit(0);
+//	wprintf(E4B_CLS());
+//	wprintf(E4B_RESET());
 }
 
 ConsoleWriter::~ConsoleWriter()
 {
-	//SetConsoleActiveScreenBuffer(hConsoleOut);
-}
-
-bool ConsoleWriter::CreateScreenBuffer()
-{
-	return true;
+	wprintf(E4B_RESET());
+	wprintf(E4B_CLS());
 }
 
 void ConsoleWriter::Foreground(ConsoleColour eColour, bool bLight)
 {
-	currentColour.fg.colour = eColour;
-	currentColour.fg.bold = bLight;
+	if (bUse8BitColours)
+	{
+		e8bColour.fg = (bLight)?(g_asE8BBright[eColour]):(g_asE8BDim[eColour]);
+	}
+	else
+	{
+		e4bColour.fg.colour = eColour;
+		e4bColour.fg.bold = bLight;
+	}
 }
 void ConsoleWriter::Background(ConsoleColour eColour, bool bLight)
 {
-	currentColour.bg.colour = eColour;
-	currentColour.bg.bold = bLight;
+	if (bUse8BitColours)
+	{
+		e8bColour.bg = (bLight)?(g_asE8BBright[eColour]):(g_asE8BDim[eColour]);
+	}
+	else
+	{
+		e4bColour.bg.colour = eColour;
+		e4bColour.bg.bold = bLight;
+	}
+}
+
+void ConsoleWriter::SetCurrentColour()
+{
+	if (bUse8BitColours)
+	{
+		E8BSetColour(e8bColour);
+	}
+	else
+	{
+		E4BSetColour(e4bColour);
+	}
 }
 
 void ConsoleWriter::Rect(int x, int y, int w, int h, const wchar_t& wc)
@@ -57,7 +107,7 @@ void ConsoleWriter::Rect(int x, int y, int w, int h, const wchar_t& wc)
 
 	line[i] = L'\0';
 
-	E4BSetColour(currentColour);
+	SetCurrentColour();
 
 	const int sx = x+1;
 	const int sy = y;
@@ -75,21 +125,21 @@ void ConsoleWriter::Rect(int x, int y, int w, int h, const wchar_t& wc)
 
 void ConsoleWriter::Print(int x, int y, const wchar_t* wszString)
 {
-	E4BSetColour(currentColour);
+	SetCurrentColour();
 	E4BMove(x+1,y);
 	wprintf(wszString);
 }
 
 void ConsoleWriter::Printn(int x, int y, const wchar_t* wszString, int nChars)
 {
-	E4BSetColour(currentColour);
+	SetCurrentColour();
 	E4BMove(x+1,y);
 	wprintf(L"%.*s", nChars, wszString);
 }
 
 void ConsoleWriter::MLPrint(int x, int y, const wchar_t* wszString)
 {
-	E4BSetColour(currentColour);
+	SetCurrentColour();
 	//if (y < sBufferSize.Y)
 	{
 		size_t nLen = 1;

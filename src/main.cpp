@@ -770,6 +770,7 @@ int main(int argc, char** argv)
 
 	GameBoard sGame(GAME_SIZE_X, GAME_SIZE_Y);
 
+#if 0
 	{
 		wchar_t awcShades[] = L"\u00A0\u2591\u2592\u2593";
 		
@@ -817,6 +818,7 @@ int main(int argc, char** argv)
 			sConsole.Print(0, 4 + i, asLogo[i]);
 		}
 	}
+#endif
 
 	// Swap and wait for keypress to skip logo...
 	sConsole.Swap();
@@ -869,13 +871,6 @@ int main(int argc, char** argv)
 			sConsole.Swap();
 		}
 	}
-
-	wchar_t chars[] = { 0x2588, 0x2593, 0x2592, 0x2591, 0};
-	sConsole.Foreground(MAGENTA, true);
-	sConsole.Print(40, 40, chars);
-
-	sConsole.Foreground(WHITE, false);
-	sConsole.Print(0, 39, L"");
 
 	return 0;
 }
