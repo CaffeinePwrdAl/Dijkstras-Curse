@@ -10,8 +10,8 @@
 	typedef wchar_t E4BChar;
 	#define e4bprintf wprintf
 	#define E4BW(x) CONCAT(L, x)
-	#define PRI_WCHAR L"%c"
-	#define PRI_WSTR  L"%s"
+	#define PRI_WCHAR L"%lc"
+	#define PRI_WSTR  L"%ls"
 #else
 	typedef char E4BChar;
 	#define e4bprintf printf
@@ -303,9 +303,7 @@ static void Test8BitCodes()
 					float fb = b / 5.0f;
 
 					E8BSetColour({{fr, fg, fb}, {0.0f, 0.0f, 0.0f}});
-					e4bprintf(L"#@$£");
-					e4bprintf(PRI_WSTR, L"#@$£");
-					//e4bprintfPRI_WSTR, L"\x2591\x2592\x2593\x2588");
+					e4bprintf(PRI_WSTR, L"\x2591\x2592\x2593\x2588");
 					e4bprintf(E4B_RESETALL());
 
 					E8BSetColour({{1.0f, 1.0f, 1.0f}, {fr, fg, fb}});

@@ -22,5 +22,9 @@ console-linux.o: console-linux.cpp console.h e4b.h
 main.o: main.cpp defs.h console.h e4b.h
 levels.o: levels.cpp defs.h
 
+test:
+	clear
+	./dijkstras-curse
+	reset
 clean:
 	rm $(SRC_ROOT)/*.o

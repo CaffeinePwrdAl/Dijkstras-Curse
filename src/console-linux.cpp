@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <termios.h>
+#include <sys/ioctl.h>
 #include "console.h"
 
 static const E8BColour g_asE8BDim[] =
@@ -26,7 +27,7 @@ static const E8BColour g_asE8BBright[] =
 };
 
 ConsoleWriter::ConsoleWriter(int width, int height)
-	: bUse8BitColours(true)
+	: bUse8BitColours(0)//true)
 {
 	setlocale(LC_CTYPE,"");
 //	wprintf(E4B_CLS());
@@ -36,21 +37,37 @@ ConsoleWriter::ConsoleWriter(int width, int height)
 	Foreground(RED, true);
 	Background(BLACK, false);
 	SetCurrentColour();
-	wprintf(L"###\n");
+	wprintf(L"### RED ON BLACK\n");
 
 	Foreground(RED, false);
 	Background(CYAN, true);
 	SetCurrentColour();
-	wprintf(L"###\n");
+	wprintf(L"### DKRED ON CYAN\n");
+
+	e8bColour.fg = { 0.8f, 0.6f, 0.3f };
+	e8bColour.bg = { 0.6f, 0.2f, 0.4f };
+	SetCurrentColour();
+	wprintf(L"### ORANGISH ON PURPLEISH\n");
 
 	Foreground(WHITE, true);
 	Background(BLACK, false);
 	SetCurrentColour();
-	wprintf(L"###\n");
+	wprintf(L"### WHITE ON BLACK\n");
 	wprintf(L"\n");
 
-	exit(42);
-
+/*
+	ConsoleReader r;
+	wchar_t ch = 0;
+	while(1)
+	{
+	while (!r.WaitForKeypress(ch))
+	{
+		printf(".");
+	}
+	}
+	r.WaitForKeypress(ch);
+	exit(0);
+*/
 //	wprintf(E4B_CLS());
 //	wprintf(E4B_RESET());
 }
@@ -196,9 +213,48 @@ ConsoleReader::~ConsoleReader()
 
 bool ConsoleReader::WaitForKeypress(wchar_t& ch)
 {
-	ch = getchar();
+	//ch = getchar();
 
-	return true;
+	/*
+	// Check for data on the fd, with timeout
+	*/
+	int32_t fd = STDIN_FILENO;
+	timeval timeout { 0, 16 * 1000 };
+	fd_set keyboard;
+	FD_ZERO(&keyboard);
+	FD_SET(fd, &keyboard);
+	int32_t ret = select(fd + 1, &keyboard, nullptr, nullptr, &timeout);
+	if (ret > 0)
+	{
+		/*
+		// If data was ready, check if there is at least a characters worth
+		*/
+		int32_t numBytes = 0;
+		ret = ioctl(fd, FIONREAD, &numBytes);
+		if (ret != -1 && numBytes >= 1)
+		{
+			/*
+			// Read data from the file descriptor
+			//
+			// Note, reading native type via array of bytes is not endian safe...
+			*/
+			char bytes[4] = {0, 0, 0, 0}; 
+			ret = read(fd, &bytes, 4);
+			wprintf(L"READ: :::::::::::::::: %d  ", ret);
+			if (ret > 0)
+			{
+				if (mbstowcs(&ch, bytes, 1) == 1)
+				{
+					wprintf(L"IN: >>>>>>>>>>>>>>>> 0x%x 0x%x 0x%x 0x%x '%lc' <\n", bytes[0], bytes[1], bytes[2], bytes[3], ch);
+					return true;
+				}
+			}
+		}
+	}
+
+	// (ret == 0) - timeout
+	// (ret == -1) - error
+	return false;
 }
 
 
